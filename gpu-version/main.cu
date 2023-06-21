@@ -21,6 +21,7 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
     if (result) {
         std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
                   file << ":" << line << " '" << func << "' \n";
+        std::cerr << "Error string: " << cudaGetErrorString(result) << "\n";
         // Make sure we call CUDA Device Reset before exiting
         cudaDeviceReset();
         exit(99);
@@ -28,9 +29,11 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 }
 
 // 计算光线 r 在 world 中的反射结果，最大深度为 depth
-__device__ color ray_color(const ray &r, hittable **world, int depth, curandState *rng) {
+__device__ color ray_color(const ray &r, const color &background, hittable **world, int depth, curandState *rng) {
+//    UPDATE: 改为递归运算，因为非递归需要用栈来合并最终结果
     ray now = r;
-    color ret(1.0f, 1.0f, 1.0f);
+    color accumulated_attenuation(1.0f, 1.0f, 1.0f);
+    color accumulated_color(0.0f, 0.0f, 0.0f);
     // UPDATE 将 hittable 与 material 类整合到一起，方便数据传输
     // UPDATE 将递归调用改为循环判断，适应 cuda 的计算
     // UPDATE 仍然将 hittable 与 material 类分开，但是 hittable 在拷贝到显存后需要重新设置 material 的指针
@@ -40,25 +43,28 @@ __device__ color ray_color(const ray &r, hittable **world, int depth, curandStat
         if ((*world)->hit(now, 0.001, FLT_MAX, rec)) {
             ray scattered;
             color attenuation;
+            color emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
 
             if (rec.mat_ptr->scatter(now, rec, attenuation, scattered, rng)) {
-                ret = ret * attenuation;
+                accumulated_color += emitted * accumulated_attenuation;
+                accumulated_attenuation = accumulated_attenuation * attenuation;
                 depth--;
                 now = scattered;
                 continue;
+            } else {
+                // 没有反射，返回自发光
+                accumulated_color += accumulated_attenuation * emitted;
+                break;
             }
-            // 所有光线被吸收，返回黑色
-            return color(0, 0, 0);
+        } else {
+            // 没有碰到物体，返回环境颜色
+            accumulated_color += accumulated_attenuation * background;
+            break;
         }
-
-        // 没有碰到物体，返回环境颜色
-        vec3 unit_dir = unit_vector(now.direction());
-        auto t = 0.5 * (unit_dir.y() + 1.0);
-        return ((1.0 - t) * color(1.0, 1, 1) + t * color(0.5, 0.7, 1.0)) * ret;
     }
 
     // 超过最大深度，光线衰减到 0
-    return color(0, 0, 0);
+    return accumulated_color;
 }
 
 __global__ void
@@ -78,7 +84,7 @@ render(int sample, camera **cam, hittable **world, int max_depth, int image_widt
         auto u = float(x + random_float(rng)) / (image_width - 1);
         auto v = float(y + random_float(rng)) / (image_height - 1);
         ray r = (*cam)->get_ray(u, v, rng);
-        res += ray_color(r, world, max_depth, rng);
+        res += ray_color(r, color(0.70, 0.8, 1.0), world, max_depth, rng);
     }
     // UPDATE 将除以采样数的操作移动到了 kernel 函数内
     // UPDATE 还是将操作保留在 write_color 函数里吧
@@ -269,6 +275,7 @@ int main(int argc, char *argv[]) {
 
     render<<<grids, threads>>>(samples_per_pixel, dev_camera, dev_world, max_depth, image_width, image_height,
                                dev_image, states);
+    checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     when("Finish rendering\n");
 

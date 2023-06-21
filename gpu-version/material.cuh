@@ -14,6 +14,10 @@ public:
     __device__ virtual bool scatter(
             const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
             curandState *state) const = 0;
+
+    __device__ virtual color emitted(float u, float v, const point3 &p) const {
+        return color(0, 0, 0);
+    }
 };
 
 class lambertian : public material {
@@ -142,4 +146,22 @@ private:
         r0 = r0 * r0;
         return r0 + (1 - r0) * pow(1 - cosine, 5);
     }
+};
+
+class diffuse_light : public material {
+public:
+    __device__ diffuse_light(mytexture *a) : emit(a) {}
+
+    __device__ virtual bool scatter(
+            const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
+            curandState *state) const override {
+        return false;
+    }
+
+    __device__ virtual color emitted(float u, float v, const point3 &p) const override {
+        return emit->value(u, v, p);
+    }
+
+public:
+    mytexture *emit;
 };
