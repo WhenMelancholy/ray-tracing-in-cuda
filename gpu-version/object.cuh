@@ -19,24 +19,28 @@ public:
     }
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
-                                hit_record &rec) const override;
-};
-
-__device__ bool hittable_list::hit(const ray &r, float t_min, float t_max,
-                                   hit_record &rec) const {
-    hit_record temp_rec;
-    bool hit_anything = false;
-    auto closet_so_far = t_max;
-    for (int i = 0; i < len; ++i) {
-        if (objects[i]->hit(r, t_min, closet_so_far, temp_rec)) {
-            hit_anything = true;
-            closet_so_far = temp_rec.t;
-            rec = temp_rec;
+                                hit_record &rec) const override {
+        hit_record temp_rec;
+        bool hit_anything = false;
+        auto closet_so_far = t_max;
+        for (int i = 0; i < len; ++i) {
+            if (objects[i]->hit(r, t_min, closet_so_far, temp_rec)) {
+                hit_anything = true;
+                closet_so_far = temp_rec.t;
+                rec = temp_rec;
+            }
         }
+
+        return hit_anything;
     }
 
-    return hit_anything;
-}
+//    __device__ virtual ~hittable_list() override {
+//        for (int i = 0; i < len; ++i) {
+//            delete objects[i];
+//        }
+//        delete[] objects;
+//    }
+};
 
 class sphere : public hittable {
 public:
@@ -76,6 +80,9 @@ public:
         return true;
     }
 
+//    __device__ virtual ~sphere() override {
+//        delete mat_ptr;
+//    }
 
 public:
     point3 center;
@@ -90,4 +97,39 @@ private:
         u = phi / (2 * pi);
         v = theta / pi;
     }
+};
+
+class xy_rect : public hittable {
+public:
+    __device__ xy_rect() {}
+
+    __device__ xy_rect(float _x0, float _x1, float _y0, float _y1, float _k, material *mat)
+            : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat) {};
+
+    __device__ virtual bool hit(const ray &r, float t_min, float t_max,
+                                hit_record &rec) const override {
+        auto t = (k - r.origin().z()) / r.direction().z();
+        if (t < t_min || t > t_max)
+            return false;
+        auto x = r.origin().x() + t * r.direction().x();
+        auto y = r.origin().y() + t * r.direction().y();
+        if (x < x0 || x > x1 || y < y0 || y > y1)
+            return false;
+        rec.u = (x - x0) / (x1 - x0);
+        rec.v = (y - y0) / (y1 - y0);
+        rec.t = t;
+        auto outward_normal = vec3(0, 0, 1);
+        rec.set_face_normal(r, outward_normal);
+        rec.mat_ptr = mp;
+        rec.p = r.at(t);
+        return true;
+    }
+
+//    __device__ virtual ~xy_rect() override {
+//        delete mp;
+//    }
+
+public:
+    material *mp;
+    float x0, x1, y0, y1, k;
 };

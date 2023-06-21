@@ -83,7 +83,7 @@ render(int sample, camera **cam, hittable **world, int max_depth, int image_widt
         auto u = float(x + random_float(rng)) / (image_width - 1);
         auto v = float(y + random_float(rng)) / (image_height - 1);
         ray r = (*cam)->get_ray(u, v, rng);
-        res += ray_color(r, color(0.70, 0.8, 1.0), world, max_depth, rng);
+        res += ray_color(r, color(0.70 / 10, 0.8 / 10, 1.0 / 10), world, max_depth, rng);
     }
     // UPDATE 将除以采样数的操作移动到了 kernel 函数内
     // UPDATE 还是将操作保留在 write_color 函数里吧
@@ -177,7 +177,11 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
                 new checker_texture(color(0.2, 0.3, 0.1), color(0.9, 0.9, 0.9))));
         list[num_of_objects - 3] = new sphere(vec3(0, 2, 0), 1.0, new dielectric(1.5));
         list[num_of_objects - 2] = new sphere(vec3(-4, 2, 0), 1.0, new lambertian(vec3(0.4, 0.2, 0.1)));
-        list[num_of_objects - 1] = new sphere(vec3(4, 2, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));;
+
+        auto difflight = new diffuse_light(color(4, 4, 4));
+        auto light = new xy_rect(3, 5, 1, 3, -2, difflight);
+//        list[num_of_objects - 1] = new sphere(vec3(4, 2, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));;
+        list[num_of_objects - 1] = light;
 
         *world = new hittable_list(list, num_of_objects);
 
@@ -193,7 +197,6 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
 
 __global__ void free_scene(hittable **list, hittable **world, camera **cam, int num_of_objects) {
     for (int i = 0; i < num_of_objects; i++) {
-        delete ((sphere *) list[i])->mat_ptr;
         delete list[i];
     }
     delete *world;
@@ -214,7 +217,7 @@ int main(int argc, char *argv[]) {
     constexpr int image_width = 400;
     constexpr int image_height = static_cast<int>(image_width / aspect_ratio);
     int max_depth = 50;
-    int samples_per_pixel = 50;
+    int samples_per_pixel = 500;
     const int num_of_objects = 22 * 22 + 1 + 3;
 //    const int num_of_objects = 3;
 
@@ -297,7 +300,8 @@ int main(int argc, char *argv[]) {
     fclose(fp);
 
     // 清理退出程序
-    free_scene<<<1, 1>>>(dev_lists, dev_world, dev_camera, num_of_objects);
+    // UPDATE 让操作系统去 free 把，free 不动了
+    // free_scene<<<1, 1>>>(dev_lists, dev_world, dev_camera, num_of_objects);
     checkCudaErrors(cudaFree(dev_lists));
     checkCudaErrors(cudaFree(dev_world));
     checkCudaErrors(cudaFree(dev_camera));

@@ -152,6 +152,8 @@ class diffuse_light : public material {
 public:
     __device__ diffuse_light(mytexture *a) : emit(a) {}
 
+    __device__ diffuse_light(color c) : emit(new solid_color(c)) {}
+
     __device__ virtual bool scatter(
             const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
             curandState *state) const override {

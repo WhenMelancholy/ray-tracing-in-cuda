@@ -27,4 +27,6 @@ class hittable {
 public:
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const = 0;
+
+//    __device__ virtual ~hittable() {}
 };
