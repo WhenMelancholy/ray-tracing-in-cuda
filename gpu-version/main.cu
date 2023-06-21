@@ -1,5 +1,5 @@
 #include "camera.cuh"
-#include "hittable_list.cuh"
+#include "object.cuh"
 #include "material.cuh"
 #include "rtweekend.cuh"
 #include "texture.cuh"

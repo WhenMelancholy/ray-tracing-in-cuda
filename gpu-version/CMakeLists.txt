@@ -10,7 +10,7 @@ add_executable(parallel_compute
         camera.cuh
         color.cuh
         hittable.cuh
-        hittable_list.cuh
+        object.cuh
         material.cuh
         ray.cuh
         rtweekend.cuh
