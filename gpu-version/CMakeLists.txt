@@ -14,7 +14,6 @@ add_executable(parallel_compute
         material.cuh
         ray.cuh
         rtweekend.cuh
-        sphere.cuh
         vec3.cuh
         texture.cuh)
 

@@ -2,7 +2,6 @@
 #include "hittable_list.cuh"
 #include "material.cuh"
 #include "rtweekend.cuh"
-#include "sphere.cuh"
 #include "texture.cuh"
 #include <assert.h>
 
