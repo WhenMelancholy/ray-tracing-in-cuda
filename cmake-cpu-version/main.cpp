@@ -10,8 +10,7 @@
 #include <cstdio>
 
 // 计算光线 r 在 world 中的反射结果，最大深度为 depth
-color ray_color(const ray& r, const hittable_list& world, int depth)
-{
+color ray_color(const ray &r, const hittable_list &world, int depth) {
     ray now = r;
     color ret(1.0, 1.0, 1.0);
     // FIX 将 hittable 与 material 类整合到一起，方便数据传输
@@ -23,8 +22,7 @@ color ray_color(const ray& r, const hittable_list& world, int depth)
         if (world.hit(now, 0.001, inf, rec)) {
             ray scattered;
             color attenuation;
-            if (rec.mat_ptr->scatter(now, rec, attenuation, scattered))
-            {
+            if (rec.mat_ptr->scatter(now, rec, attenuation, scattered)) {
                 ret = ret * attenuation;
                 depth--;
                 now = scattered;
@@ -37,14 +35,15 @@ color ray_color(const ray& r, const hittable_list& world, int depth)
         // 没有碰到物体，返回环境颜色
         vec3 unit_dir = unit_vector(now.direction());
         auto t = 0.5 * (unit_dir.y() + 1.0);
-        return ((1.0 - t) * color(1.0, 1, 1) + t * color(0.5, 0.7, 1.0))*ret;
+        return ((1.0 - t) * color(1.0, 1, 1) + t * color(0.5, 0.7, 1.0)) * ret;
     }
- 
+
     // 超过最大深度，光线衰减到 0
     return color(0, 0, 0);
 }
 
-color render(double x, double y, int sample, camera cam, hittable_list world, int max_depth,int image_width,int image_height) {
+color render(double x, double y, int sample, camera cam, hittable_list world, int max_depth, int image_width,
+             int image_height) {
     color res;
     for (int s = 0; s < sample; ++s) {
         auto u = double(x + random_double()) / (image_width - 1);
@@ -56,9 +55,10 @@ color render(double x, double y, int sample, camera cam, hittable_list world, in
 }
 
 hittable_list random_scene();
-void run(int argc, char* argv[], long start) {
+
+void run(int argc, char *argv[], long start) {
     // 重定向输出到 main.ppm 
-    (void)freopen("main.ppm", "w", stdout);
+    (void) freopen("main.ppm", "w", stdout);
 
     // Init image
     const auto aspect_ratio = 16.0 / 9.0;
@@ -71,14 +71,11 @@ void run(int argc, char* argv[], long start) {
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "-w") == 0) {
             image_width = atoi(argv[i + 1]);
-        }
-        else if (strcmp(argv[i], "-h") == 0) {
+        } else if (strcmp(argv[i], "-h") == 0) {
             image_height = atoi(argv[i + 1]);
-        }
-        else if (strcmp(argv[i], "-d") == 0) {
+        } else if (strcmp(argv[i], "-d") == 0) {
             max_depth = atoi(argv[i + 1]);
-        }
-        else if (strcmp(argv[i], "-spp") == 0) {
+        } else if (strcmp(argv[i], "-spp") == 0) {
             samples_per_pixel = atoi(argv[i + 1]);
         }
     }
@@ -103,20 +100,21 @@ void run(int argc, char* argv[], long start) {
         fprintf(stderr, "\rScanlines remaining %d ", j);
         fflush(stderr);
         for (int i = 0; i < image_width; ++i) {
-            color c=render(i,j,samples_per_pixel,cam,world,max_depth,image_width,image_height);
+            color c = render(i, j, samples_per_pixel, cam, world, max_depth, image_width, image_height);
             write_color(std::cout, c, samples_per_pixel);
         }
     }
 
     fprintf(stderr, "\nDone\n");
 
-    FILE* fp = fopen("gpu-version-time.log", "a");
-    fprintf(fp, "basic cpu verion, image width: %d,image height: %d, max depth: %d, samples per pixel: %d, time: %lf s\n",
-        image_width, image_height, max_depth, samples_per_pixel, (clock() - start) / double(CLOCKS_PER_SEC));
+    FILE *fp = fopen("gpu-version-time.log", "a");
+    fprintf(fp,
+            "basic cpu verion, image width: %d,image height: %d, max depth: %d, samples per pixel: %d, time: %lf s\n",
+            image_width, image_height, max_depth, samples_per_pixel, (clock() - start) / double(CLOCKS_PER_SEC));
     fclose(fp);
 }
 
-int main(int argc,char *argv[]) {
+int main(int argc, char *argv[]) {
     // 使用固定的随机数种子，保证每次测试生成的物体和发出的光线是一样的
     srand(7);
 
@@ -127,8 +125,11 @@ int main(int argc,char *argv[]) {
 hittable_list random_scene() {
     hittable_list world;
 
-    auto ground_material = new lambertian(color(0.5, 0.5, 0.5));
-    world.add(new sphere(point3(0, -1000, 0), 1000, ground_material));
+//    auto ground_material = new lambertian(color(0.5, 0.5, 0.5));
+//    world.add(new sphere(point3(0, -1000, 0), 1000, ground_material));
+
+    auto checker = new checker_texture(color(0.2, 0.3, 0.1), color(0.9, 0.9, 0.9));
+    world.add(new sphere(point3(0, -1000, 0), 1000.0, new lambertian(checker)));
 
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
@@ -136,22 +137,20 @@ hittable_list random_scene() {
             point3 center(a + 0.9 * random_double(), 0.2, b + 0.9 * random_double());
 
             if ((center - point3(4, 0.2, 0)).length() > 0.9) {
-                material* sphere_material;
+                material *sphere_material;
 
                 if (choose_mat < 0.8) {
                     // diffuse
                     auto albedo = color::random() * color::random();
                     sphere_material = new lambertian(albedo);
                     world.add(new sphere(center, 0.2, sphere_material));
-                }
-                else if (choose_mat < 0.95) {
+                } else if (choose_mat < 0.95) {
                     // metal
                     auto albedo = color::random(0.5, 1);
                     auto fuzz = random_double(0, 0.5);
                     sphere_material = new metal(albedo, fuzz);
                     world.add(new sphere(center, 0.2, sphere_material));
-                }
-                else {
+                } else {
                     // glass
                     sphere_material = new dielectric(1.5);
                     world.add(new sphere(center, 0.2, sphere_material));
