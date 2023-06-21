@@ -2,12 +2,10 @@
 #include "hittable.h"
 #include "sphere.h"
 #include <memory>
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
 
 class hittable_list : public hittable {
 public:
-    thrust::host_vector<sphere> objects;
+    std::vector<sphere> objects;
     hittable_list() {}
     hittable_list(sphere* object) {
         add(object);
