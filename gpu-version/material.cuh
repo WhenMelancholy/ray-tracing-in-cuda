@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rtweekend.cuh"
+#include "texture.cuh"
 
 #include <cuda.h>
 #include <curand_kernel.h>
@@ -18,8 +19,9 @@ public:
 class lambertian : public material {
 public:
     __device__ lambertian(const color &a)
-            : albedo(a) {
-    }
+            : albedo(new solid_color(a)) {}
+
+    __device__ lambertian(mytexture *a) : albedo(a) {}
 
     __device__ virtual bool scatter(
             const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
@@ -34,12 +36,12 @@ public:
             scatter_direction = rec.normal;
 
         scattered = ray(rec.p, scatter_direction);
-        attenuation = albedo;
+        attenuation = albedo->value(rec.u, rec.v, rec.p);
         return true;
     }
 
 public:
-    color albedo;
+    mytexture *albedo;
 };
 
 class metal : public material {

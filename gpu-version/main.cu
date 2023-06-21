@@ -3,6 +3,7 @@
 #include "material.cuh"
 #include "rtweekend.cuh"
 #include "sphere.cuh"
+#include "texture.cuh"
 #include <assert.h>
 
 #include "color.cuh"
@@ -110,35 +111,35 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
              int num_of_objects) {
 
     // UPDATE 添加小型场景进行测试
-//    if (false) {
-//        list[0] = new sphere(vec3(0, 0, -1), 0.5,
-//                             new lambertian(vec3(0.1, 0.2, 0.5)));
-//        list[1] = new sphere(vec3(0, -100.5, -1), 100,
-//                             new lambertian(vec3(0.8, 0.8, 0.0)));
-//        list[2] = new sphere(vec3(1, 0, -1), 0.5,
-//                             new metal(vec3(0.8, 0.6, 0.2), 0.0));
-//        list[3] = new sphere(vec3(-1, 0, -1), 0.5,
-//                             new dielectric(1.5));
-//        list[4] = new sphere(vec3(-1, 0, -1), -0.45,
-//                             new dielectric(1.5));
-//        *world = new hittable_list(list, 5);
-//
-//        // Camera
-//        point3 lookfrom(13, 2, 3);
-//        point3 lookat(0, 0, 0);
-//        vec3 vup(0, 1, 0);
-//        auto dist_to_focus = (lookfrom - lookat).length();
-//        auto aperture = 0.1;
-////    *cam = new camera(lookfrom, lookat, vup, 20, float(image_width) / float(image_height), aperture, dist_to_focus);
-//
-//        *cam = new camera(vec3(-2, 2, 1),
-//                          vec3(0, 0, -1),
-//                          vec3(0, 1, 0),
-//                          20.0,
-//                          float(image_width) / float(image_height), 0, dist_to_focus);
-//
-//        return;
-//    }
+    //    if (false) {
+    //        list[0] = new sphere(vec3(0, 0, -1), 0.5,
+    //                             new lambertian(vec3(0.1, 0.2, 0.5)));
+    //        list[1] = new sphere(vec3(0, -100.5, -1), 100,
+    //                             new lambertian(vec3(0.8, 0.8, 0.0)));
+    //        list[2] = new sphere(vec3(1, 0, -1), 0.5,
+    //                             new metal(vec3(0.8, 0.6, 0.2), 0.0));
+    //        list[3] = new sphere(vec3(-1, 0, -1), 0.5,
+    //                             new dielectric(1.5));
+    //        list[4] = new sphere(vec3(-1, 0, -1), -0.45,
+    //                             new dielectric(1.5));
+    //        *world = new hittable_list(list, 5);
+    //
+    //        // Camera
+    //        point3 lookfrom(13, 2, 3);
+    //        point3 lookat(0, 0, 0);
+    //        vec3 vup(0, 1, 0);
+    //        auto dist_to_focus = (lookfrom - lookat).length();
+    //        auto aperture = 0.1;
+    //        *cam = new camera(lookfrom, lookat, vup, 20, float(image_width) / float(image_height), aperture, dist_to_focus);
+    //
+    //        *cam = new camera(vec3(-2, 2, 1),
+    //                          vec3(0, 0, -1),
+    //                          vec3(0, 1, 0),
+    //                          20.0,
+    //                          float(image_width) / float(image_height), 0, dist_to_focus);
+    //
+    //        return;
+    //    }
 
     int id = blockIdx.x;
     auto *rng = &states[id];
@@ -166,7 +167,9 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
     }
 
     if (id == 0) {
-        list[num_of_objects - 4] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(vec3(0.5, 0.5, 0.5)));
+//        list[num_of_objects - 4] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(vec3(0.5, 0.5, 0.5)));
+        list[num_of_objects - 4] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(
+                new checker_texture(color(0.2, 0.3, 0.1), color(0.9, 0.9, 0.9))));
         list[num_of_objects - 3] = new sphere(vec3(0, 2, 0), 1.0, new dielectric(1.5));
         list[num_of_objects - 2] = new sphere(vec3(-4, 2, 0), 1.0, new lambertian(vec3(0.4, 0.2, 0.1)));
         list[num_of_objects - 1] = new sphere(vec3(4, 2, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));;
@@ -196,7 +199,7 @@ __global__ void free_scene(hittable **list, hittable **world, camera **cam, int 
 int main(int argc, char *argv[]) {
     // cpu 计时功能
     auto start = clock();
-    when("开始计时\n");
+    when("Start counting time\n");
 
     // 重定向输出到 main.ppm
     (void) freopen("main.ppm", "w", stdout);
@@ -206,7 +209,7 @@ int main(int argc, char *argv[]) {
     constexpr int image_width = 400;
     constexpr int image_height = static_cast<int>(image_width / aspect_ratio);
     int max_depth = 50;
-    int samples_per_pixel = 500;
+    int samples_per_pixel = 50;
     const int num_of_objects = 22 * 22 + 1 + 3;
 //    const int num_of_objects = 3;
 
@@ -228,7 +231,7 @@ int main(int argc, char *argv[]) {
     curandStateXORWOW_t *states;
     constexpr int num_of_pixels = image_height * image_width;
     checkCudaErrors(cudaMalloc(&states, sizeof(curandStateXORWOW_t) * num_of_pixels));
-    when("完成随机数库内存的分配\n");
+    when("Finish the memory allocation of random library\n");
 
     // 随机数生成器的初始化操作
     // UPDATE 将随机数初始化从 1xnum_of_pixels 改为 num_of_pixelsx1，前者会超过线程数限制
@@ -237,7 +240,7 @@ int main(int argc, char *argv[]) {
 
     // 完成随机数库和常数的初始化
     checkCudaErrors(cudaDeviceSynchronize());
-    when("完成随机数和常数的初始化\n");
+    when("Finish the initialization of random library and constants\n");
 
     // UPDATE hittable_list 需要从 vector 迁移到数组，使用指针开辟空间，方便在显卡间传输数据
     // UPDATE hittable_list 从数组迁移到 thrust_vector，数组不方便处理继承问题
@@ -248,31 +251,31 @@ int main(int argc, char *argv[]) {
     checkCudaErrors(cudaMalloc((void **) &dev_lists, sizeof(hittable *) * num_of_objects));
     checkCudaErrors(cudaMalloc((void **) &dev_world, sizeof(hittable *)));
     checkCudaErrors(cudaMalloc((void **) &dev_camera, sizeof(camera *)));
-    when("完成物体、世界、相机的内存分配\n");
+    when("Finish the allocation of objects, world, camera\n");
 
     random_scene<<<num_of_objects, 1>>>(dev_lists, dev_world, dev_camera, image_width, image_height, states,
                                         num_of_objects);
-    when("完成物体、世界、相机的创建\n");
+    when("Finish the creation of world, objects, camera\n");
 
     // 分配本地和显卡图像的空间
     static color image[num_of_pixels];
     color *dev_image;
     checkCudaErrors(cudaMalloc((void **) &dev_image, sizeof(color) * num_of_pixels));
-    when("完成图像空间的分配\n");
+    when("Finish the allocation of image\n");
 
     // 完成世界、相机、图像内存的初始化
     checkCudaErrors(cudaDeviceSynchronize());
-    when("开始渲染\n");
+    when("Start rendering\n");
 
     render<<<grids, threads>>>(samples_per_pixel, dev_camera, dev_world, max_depth, image_width, image_height,
                                dev_image, states);
     checkCudaErrors(cudaDeviceSynchronize());
-    when("完成渲染\n");
+    when("Finish rendering\n");
 
     // 输出
     checkCudaErrors(cudaMemcpy(image, dev_image, sizeof(color) * num_of_pixels, cudaMemcpyDeviceToHost));
     checkCudaErrors(cudaDeviceSynchronize());
-    when("完成图像的拷贝\n");
+    when("Copying image\n");
     printf("P3\n%d %d\n255\n", image_width, image_height);
 
     for (int j = image_height - 1; j >= 0; --j) {
