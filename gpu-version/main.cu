@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
     constexpr int image_width = 400;
     constexpr int image_height = static_cast<int>(image_width / aspect_ratio);
     int max_depth = 50;
-    int samples_per_pixel = 500;
+    int samples_per_pixel = 5000;
     const int num_of_objects = 22 * 22 + 1 + 3;
 //    const int num_of_objects = 3;
 
