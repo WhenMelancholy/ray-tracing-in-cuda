@@ -210,6 +210,7 @@ int main(int argc, char *argv[]) {
     auto start = clock();
     when("Start counting time\n");
 
+    
     // Init image
     constexpr auto aspect_ratio = 16.0 / 9.0;
     constexpr int image_width = 1600;
