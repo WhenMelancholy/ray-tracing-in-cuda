@@ -143,6 +143,4 @@ __device__ vec3 random_in_unit_disk(curandState *state) {
             continue;
         return p;
     }
-//    auto p = vec3(random_float(-1, 1, state), random_float(-1, 1, state), 0);
-//    return random_float(state) * unit_vector(p);
 }

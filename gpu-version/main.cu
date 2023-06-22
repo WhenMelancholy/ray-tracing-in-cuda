@@ -80,6 +80,8 @@ render(int sample, camera **cam, hittable **world, int max_depth, int image_widt
 
     color res(0, 0, 0);
     for (int s = 0; s < sample; ++s) {
+        if (id == 0)
+            printf("sample: %d/%d\n", s, sample);
         auto u = float(x + random_float(rng)) / (image_width - 1);
         auto v = float(y + random_float(rng)) / (image_height - 1);
         ray r = (*cam)->get_ray(u, v, rng);
@@ -179,14 +181,15 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
         list[num_of_objects - 2] = new sphere(vec3(-4, 2, 0), 1.0, new lambertian(vec3(0.4, 0.2, 0.1)));
 
         auto difflight = new diffuse_light(color(4, 4, 4));
-        auto light = new xy_rect(3, 5, 1, 3, -2, difflight);
+        auto rect_light = new xy_rect(3, 5, 1, 3, -2, difflight);
 //        list[num_of_objects - 1] = new sphere(vec3(4, 2, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));;
-        list[num_of_objects - 1] = light;
+        auto cylinder_light = new cylinder(0.5, 0, 2, difflight);
+        list[num_of_objects - 1] = cylinder_light;
 
         *world = new hittable_list(list, num_of_objects);
 
         // Camera
-        point3 lookfrom(13, 2, 3);
+        point3 lookfrom(2, 2, -13);
         point3 lookat(0, 0, 0);
         vec3 vup(0, 1, 0);
         auto dist_to_focus = (lookfrom - lookat).length();
@@ -209,15 +212,12 @@ int main(int argc, char *argv[]) {
     auto start = clock();
     when("Start counting time\n");
 
-    // 重定向输出到 main.ppm
-    (void) freopen("main.ppm", "w", stdout);
-
     // Init image
     constexpr auto aspect_ratio = 16.0 / 9.0;
-    constexpr int image_width = 400;
+    constexpr int image_width = 1600;
     constexpr int image_height = static_cast<int>(image_width / aspect_ratio);
     int max_depth = 50;
-    int samples_per_pixel = 5000;
+    int samples_per_pixel = 500;
     const int num_of_objects = 22 * 22 + 1 + 3;
 //    const int num_of_objects = 3;
 
@@ -285,6 +285,9 @@ int main(int argc, char *argv[]) {
     checkCudaErrors(cudaMemcpy(image, dev_image, sizeof(color) * num_of_pixels, cudaMemcpyDeviceToHost));
     checkCudaErrors(cudaDeviceSynchronize());
     when("Copying image\n");
+
+    // 重定向输出到 main.ppm
+    (void) freopen("main.ppm", "w", stdout);
     printf("P3\n%d %d\n255\n", image_width, image_height);
 
     for (int j = image_height - 1; j >= 0; --j) {

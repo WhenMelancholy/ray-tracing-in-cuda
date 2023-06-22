@@ -136,7 +136,7 @@ public:
 
 class xz_rect : public hittable {
 public:
-    __device__ xz_rect() {}
+    __device__ xz_rect() {};
 
     __device__ xz_rect(float _x0, float _x1, float _z0, float _z1, float _k, material *mat)
             : x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat) {};
@@ -161,13 +161,13 @@ public:
     }
 
 public:
-    material *mp;
-    float x0, x1, z0, z1, k;
+    material *mp{};
+    float x0{}, x1{}, z0{}, z1{}, k{};
 };
 
 class yz_rect : public hittable {
 public:
-    __device__ yz_rect() {}
+    __device__ yz_rect() {};
 
     __device__ yz_rect(float _y0, float _y1, float _z0, float _z1, float _k, material *mat)
             : y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat) {};
@@ -192,6 +192,75 @@ public:
     }
 
 public:
-    material *mp;
-    float y0, y1, z0, z1, k;
+    material *mp{};
+    float y0{}, y1{}, z0{}, z1{}, k{};
+};
+
+__device__ __host__ bool quadratic(float a, float b, float c, float &t0, float &t1) {
+    float delta = b * b - 4 * a * c;
+    if (delta < 0)
+        return false;
+    float sqrt_delta = sqrt(delta);
+
+    float q;
+    if (b < 0)
+        q = -0.5f * (b - sqrt_delta);
+    else
+        q = -0.5f * (b + sqrt_delta);
+    t0 = q / a;
+    t1 = c / q;
+    if (t0 > t1) {
+        float temp = t0;
+        t0 = t1;
+        t1 = temp;
+    }
+    return true;
+}
+
+class cylinder : public hittable {
+public:
+    __device__ cylinder() {};
+
+    __device__ cylinder(float _radius, float _zmin, float _zmax, material *mat)
+            : radius(_radius), zmin(_zmin), zmax(_zmax), mat_ptr(mat) {};
+
+    __device__ virtual bool hit(const ray &r, float t_min, float t_max,
+                                hit_record &rec) const override {
+        auto dx = r.direction().x(), dy = r.direction().y(), dz = r.direction().z();
+        auto ox = r.origin().x(), oy = r.origin().y(), oz = r.origin().z();
+        // solve quadratic equation for t values
+        float a = dx * dx + dy * dy;
+        float b = 2 * (dx * ox + dy * oy);
+        float c = ox * ox + oy * oy - radius * radius;
+        float t0, t1;
+        if (!quadratic(a, b, c, t0, t1))
+            return false;
+        if (t0 > t_max || t1 < t_min)
+            return false;
+        float t = t0;
+        if (t0 < t_min) {
+            t = t1;
+            if (t > t_max)
+                return false;
+        }
+        // compute sphere hit position and phi and fill hit record
+        rec.p = r.at(t);
+        rec.set_face_normal(r, vec3((rec.p.x() - ox) / radius, (rec.p.y() - oy) / radius, 0));
+        rec.mat_ptr = mat_ptr;
+        rec.t = t;
+
+        float phi = atan2(rec.p.y(), rec.p.x());
+        if (phi < 0)
+            phi += 2 * pi;
+        if (rec.p.z() < zmin || rec.p.z() > zmax || phi < 0 || phi > 2 * pi)
+            return false;
+        rec.u = phi / (2 * pi);
+        rec.v = (rec.p.z() - zmin) / (zmax - zmin);
+        return true;
+    }
+
+public:
+    material *mat_ptr{};
+    float radius{};
+    float zmin{}, zmax{};
 };
