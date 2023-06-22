@@ -11,9 +11,9 @@ public:
     int len;
     hittable **objects;
 
-    __device__ hittable_list() {}
+    __device__ __host__ hittable_list() {}
 
-    __device__ hittable_list(hittable **o, int l) {
+    __device__ __host__ hittable_list(hittable **o, int l) {
         objects = o;
         len = l;
     }
@@ -33,20 +33,13 @@ public:
 
         return hit_anything;
     }
-
-//    __device__ virtual ~hittable_list() override {
-//        for (int i = 0; i < len; ++i) {
-//            delete objects[i];
-//        }
-//        delete[] objects;
-//    }
 };
 
 class sphere : public hittable {
 public:
-    __device__ sphere() {}
+    __device__ __host__ sphere() {}
 
-    __device__ sphere(point3 cen, float r, material *m)
+    __device__ __host__ sphere(point3 cen, float r, material *m)
             : center(cen), radius(r), mat_ptr(m) {
     }
 
@@ -101,9 +94,9 @@ private:
 
 class xy_rect : public hittable {
 public:
-    __device__ xy_rect() {}
+    __device__ __host__ xy_rect() {}
 
-    __device__ xy_rect(float _x0, float _x1, float _y0, float _y1, float _k, material *mat)
+    __device__ __host__ xy_rect(float _x0, float _x1, float _y0, float _y1, float _k, material *mat)
             : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat) {};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
@@ -136,9 +129,9 @@ public:
 
 class xz_rect : public hittable {
 public:
-    __device__ xz_rect() {};
+    __device__ __host__ xz_rect() {};
 
-    __device__ xz_rect(float _x0, float _x1, float _z0, float _z1, float _k, material *mat)
+    __device__ __host__ xz_rect(float _x0, float _x1, float _z0, float _z1, float _k, material *mat)
             : x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat) {};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
@@ -167,9 +160,9 @@ public:
 
 class yz_rect : public hittable {
 public:
-    __device__ yz_rect() {};
+    __device__ __host__ yz_rect() {};
 
-    __device__ yz_rect(float _y0, float _y1, float _z0, float _z1, float _k, material *mat)
+    __device__ __host__ yz_rect(float _y0, float _y1, float _z0, float _z1, float _k, material *mat)
             : y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat) {};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
@@ -219,9 +212,9 @@ __device__ __host__ bool quadratic(float a, float b, float c, float &t0, float &
 
 class cylinder : public hittable {
 public:
-    __device__ cylinder() {};
+    __device__ __host__ cylinder() {};
 
-    __device__ cylinder(float _radius, float _zmin, float _zmax, material *mat)
+    __device__ __host__ cylinder(float _radius, float _zmin, float _zmax, material *mat)
             : radius(_radius), zmin(_zmin), zmax(_zmax), mat_ptr(mat) {};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,

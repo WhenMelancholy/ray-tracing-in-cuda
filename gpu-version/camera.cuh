@@ -6,7 +6,7 @@
 
 class camera {
 public:
-    __device__ camera(
+    __device__ __host__ camera(
             point3 lookfrom,
             point3 lookat,
             vec3 vup,

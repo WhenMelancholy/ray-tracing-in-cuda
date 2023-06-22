@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <limits>
+#include <iostream>
 
 #include <cuda.h>
 #include <curand_kernel.h>
@@ -11,7 +12,7 @@
 
 #define pi 3.14159265f
 
-__device__ float degrees_to_radians(float degrees) {
+__device__ __host__ float degrees_to_radians(float degrees) {
     return degrees * pi / 180.0f;
 }
 
@@ -31,4 +32,19 @@ __device__ __host__ float clamp(float x, float min, float max) {
     if (x > max)
         return max;
     return x;
+}
+
+// debug Êä³öº¯Êý
+#define when(...) fprintf(stderr,__VA_ARGS__)
+#define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
+
+void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line) {
+    if (result) {
+        std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
+                  file << ":" << line << " '" << func << "' \n";
+        std::cerr << "Error string: " << cudaGetErrorString(result) << "\n";
+        // Make sure we call CUDA Device Reset before exiting
+        cudaDeviceReset();
+        exit(99);
+    }
 }

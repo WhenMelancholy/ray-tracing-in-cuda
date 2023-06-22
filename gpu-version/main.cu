@@ -5,26 +5,12 @@
 #include "texture.cuh"
 
 #include "color.cuh"
+#include "parser.hpp"
 
 #include <iostream>
 #include <cstdio>
 #include <cuda.h>
 #include <curand_kernel.h>
-
-// debug 输出函数
-#define when(...) fprintf(stderr,__VA_ARGS__)
-#define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
-
-void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line) {
-    if (result) {
-        std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
-                  file << ":" << line << " '" << func << "' \n";
-        std::cerr << "Error string: " << cudaGetErrorString(result) << "\n";
-        // Make sure we call CUDA Device Reset before exiting
-        cudaDeviceReset();
-        exit(99);
-    }
-}
 
 // 计算光线 r 在 world 中的反射结果，最大深度为 depth
 __device__ color ray_color(const ray &r, const color &background, hittable **world, int depth, curandState *rng) {
@@ -99,8 +85,8 @@ void init_constant() {
 
     // UPDATE cudaMemcpyToSymbol 中设备端的变量是不需要加 & 的
     // UPDATE 使用 define 定义的常量替代常数常量
-//    checkCudaErrors(cudaMemcpyToSymbol(inf, &tmp_inf, sizeof(float)));
-//    checkCudaErrors(cudaMemcpyToSymbol(pi, &tmp_pi, sizeof(float)));
+    // checkCudaErrors(cudaMemcpyToSymbol(inf, &tmp_inf, sizeof(float)));
+    // checkCudaErrors(cudaMemcpyToSymbol(pi, &tmp_pi, sizeof(float)));
 }
 
 __global__ void init_random_library(curandState *state) {
@@ -210,7 +196,6 @@ int main(int argc, char *argv[]) {
     auto start = clock();
     when("Start counting time\n");
 
-    
     // Init image
     constexpr auto aspect_ratio = 16.0 / 9.0;
     constexpr int image_width = 1600;
@@ -218,7 +203,7 @@ int main(int argc, char *argv[]) {
     int max_depth = 50;
     int samples_per_pixel = 500;
     const int num_of_objects = 22 * 22 + 1 + 3;
-//    const int num_of_objects = 3;
+    // const int num_of_objects = 3;
 
     // 根据命令行参数设置图像参数
     // UPDATE 删去调整图像长宽的参数
