@@ -20,7 +20,6 @@ public:
                 random_float(min, max, state)};
     }
 
-
 public:
     __host__ __device__ vec3()
             : e{0, 0, 0} {
@@ -66,6 +65,11 @@ public:
 
     __host__ __device__ bool near_zero(const float &eps = 1e-8) {
         return fabs(e[0]) < eps && fabs(e[1]) < eps && fabs(e[2]) < eps;
+    }
+
+    __host__ __device__ vec3 normalize() const {
+        float len = length();
+        return vec3(e[0] / len, e[1] / len, e[2] / len);
     }
 
 public:
@@ -116,6 +120,8 @@ __host__ __device__ vec3 reflect(const vec3 &v, const vec3 &n) {
     return v - 2 * dot(v, n) * n;
 }
 
+using std::min;
+
 __host__ __device__ vec3 refract(const vec3 &uv, const vec3 &n, float etai_over_etat) {
     auto cos_theta = min(dot(-uv, n), 1.0f);
     vec3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
@@ -143,4 +149,226 @@ __device__ vec3 random_in_unit_disk(curandState *state) {
             continue;
         return p;
     }
+}
+
+struct matrix4x4 {
+    __device__ __host__ matrix4x4() {
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                m[i][j] = 0;
+    }
+
+    __device__ __host__ matrix4x4(float mat[4][4]) {
+        memcpy(m, mat, 16 * sizeof(float));
+    }
+
+    __device__ __host__ matrix4x4(float t00, float t01, float t02, float t03,
+                                  float t10, float t11, float t12, float t13,
+                                  float t20, float t21, float t22, float t23,
+                                  float t30, float t31, float t32, float t33) {
+        m[0][0] = t00;
+        m[0][1] = t01;
+        m[0][2] = t02;
+        m[0][3] = t03;
+        m[1][0] = t10;
+        m[1][1] = t11;
+        m[1][2] = t12;
+        m[1][3] = t13;
+        m[2][0] = t20;
+        m[2][1] = t21;
+        m[2][2] = t22;
+        m[2][3] = t23;
+        m[3][0] = t30;
+        m[3][1] = t31;
+        m[3][2] = t32;
+        m[3][3] = t33;
+    }
+
+    __device__ __host__ bool operator==(const matrix4x4 &mat) const {
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                if (m[i][j] != mat.m[i][j])
+                    return false;
+        return true;
+    }
+
+    __device__ __host__ bool operator!=(const matrix4x4 &mat) const {
+        return !(*this == mat);
+    }
+
+    // Transpose this matrix
+    __device__ __host__ matrix4x4 transpose() const {
+        return matrix4x4(m[0][0], m[1][0], m[2][0], m[3][0],
+                         m[0][1], m[1][1], m[2][1], m[3][1],
+                         m[0][2], m[1][2], m[2][2], m[3][2],
+                         m[0][3], m[1][3], m[2][3], m[3][3]);
+    }
+
+    // Multiply two matrices
+    __device__ __host__ matrix4x4 operator*(const matrix4x4 &rhs) const {
+        matrix4x4 r;
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                r.m[i][j] = m[i][0] * rhs.m[0][j] +
+                            m[i][1] * rhs.m[1][j] +
+                            m[i][2] * rhs.m[2][j] +
+                            m[i][3] * rhs.m[3][j];
+        return r;
+    }
+
+    // Get inverse of this matrix
+    __device__ __host__ matrix4x4 inverse() const {
+        int indxc[4], indxr[4];
+        int ipiv[4] = {0, 0, 0, 0};
+        float minv[4][4];
+        memcpy(minv, m, 4 * 4 * sizeof(float));
+        for (int i = 0; i < 4; i++) {
+            int irow = 0, icol = 0;
+            float big = 0.f;
+            // Choose pivot
+            for (int j = 0; j < 4; j++) {
+                if (ipiv[j] != 1) {
+                    for (int k = 0; k < 4; k++) {
+                        if (ipiv[k] == 0) {
+                            if (std::abs(minv[j][k]) >= big) {
+                                big = float(std::abs(minv[j][k]));
+                                irow = j;
+                                icol = k;
+                            }
+                        } else if (ipiv[k] > 1)
+                            printf("Singular matrix in MatrixInvert");
+                    }
+                }
+            }
+            ++ipiv[icol];
+            // Swap rows _irow_ and _icol_ for pivot
+            if (irow != icol) {
+                for (int k = 0; k < 4; ++k) std::swap(minv[irow][k], minv[icol][k]);
+            }
+            indxr[i] = irow;
+            indxc[i] = icol;
+            if (minv[icol][icol] == 0.f) printf("Singular matrix in MatrixInvert");
+
+            // Set $m[icol][icol]$ to one by scaling row _icol_ appropriately
+            float pivinv = 1. / minv[icol][icol];
+            minv[icol][icol] = 1.;
+            for (int j = 0; j < 4; j++) minv[icol][j] *= pivinv;
+
+            // Subtract this row from others to zero out their columns
+            for (int j = 0; j < 4; j++) {
+                if (j != icol) {
+                    float save = minv[j][icol];
+                    minv[j][icol] = 0;
+                    for (int k = 0; k < 4; k++) minv[j][k] -= minv[icol][k] * save;
+                }
+            }
+        }
+        // Swap columns to reflect permutation
+        for (int j = 3; j >= 0; j--) {
+            if (indxr[j] != indxc[j]) {
+                for (int k = 0; k < 4; k++)
+                    std::swap(minv[k][indxr[j]], minv[k][indxc[j]]);
+            }
+        }
+        return matrix4x4(minv);
+    }
+
+    // Check if matrix is identity
+    __device__ __host__ bool is_identity() const {
+        return m[0][0] == 1.f && m[0][1] == 0.f && m[0][2] == 0.f && m[0][3] == 0.f &&
+               m[1][0] == 0.f && m[1][1] == 1.f && m[1][2] == 0.f && m[1][3] == 0.f &&
+               m[2][0] == 0.f && m[2][1] == 0.f && m[2][2] == 1.f && m[2][3] == 0.f &&
+               m[3][0] == 0.f && m[3][1] == 0.f && m[3][2] == 0.f && m[3][3] == 1.f;
+    }
+
+    float m[4][4];
+};
+
+class transform {
+public:
+    __device__ __host__ transform() {}
+
+    __device__ __host__ transform(const float mat[4][4]) {
+        m = matrix4x4(mat[0][0], mat[0][1], mat[0][2], mat[0][3],
+                      mat[1][0], mat[1][1], mat[1][2], mat[1][3],
+                      mat[2][0], mat[2][1], mat[2][2], mat[2][3],
+                      mat[3][0], mat[3][1], mat[3][2], mat[3][3]);
+        m_inv = m.inverse();
+    }
+
+    __device__ __host__ transform(const matrix4x4 &mat) : m(mat), m_inv(mat.inverse()) {}
+
+    __device__ __host__ transform(const matrix4x4 &mat, const matrix4x4 &minv) : m(mat), m_inv(minv) {}
+
+    __device__ __host__ transform inverse() const { return transform(m_inv, m); }
+
+    __device__ __host__ transform transpose() const { return transform(m.transpose(), m_inv.transpose()); }
+
+    __device__ __host__ bool is_identity() const { return m.is_identity(); }
+
+    // operator == and operator !=
+    __device__ __host__ bool operator==(const transform &t) const { return t.m == m && t.m_inv == m_inv; }
+
+    __device__ __host__ bool operator!=(const transform &t) const { return t.m != m || t.m_inv != m_inv; }
+
+    // get matrix or get inverse matrix
+    __device__ __host__ const matrix4x4 &get_matrix() const { return m; }
+
+    __device__ __host__ const matrix4x4 &get_inverse_matrix() const { return m_inv; }
+
+    // operator *
+    __device__ __host__ transform operator*(const transform &t) const {
+        return transform(m * t.m, t.m_inv * m_inv);
+    }
+
+    // operator () to transform point, vector, normal, ray, bound3
+    __device__ __host__ point3 operator()(const point3 &p) const {
+        float x = p.x(), y = p.y(), z = p.z();
+        float xp = m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z + m.m[0][3];
+        float yp = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z + m.m[1][3];
+        float zp = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z + m.m[2][3];
+        float wp = m.m[3][0] * x + m.m[3][1] * y + m.m[3][2] * z + m.m[3][3];
+        if (wp == 1.) return point3(xp, yp, zp);
+        else return point3(xp, yp, zp) / wp;
+    }
+
+private:
+    matrix4x4 m, m_inv;
+};
+
+// common transforms
+__device__ __host__ transform translate(const vec3 &delta) {
+    matrix4x4 m(1, 0, 0, delta.x(),
+                0, 1, 0, delta.y(),
+                0, 0, 1, delta.z(),
+                0, 0, 0, 1);
+    matrix4x4 minv(1, 0, 0, -delta.x(),
+                   0, 1, 0, -delta.y(),
+                   0, 0, 1, -delta.z(),
+                   0, 0, 0, 1);
+    return transform(m, minv);
+}
+
+__device__ __host__ transform rotate(const vec3 &axis, float theta) {
+    vec3 a = axis.normalize();
+    float sintheta = sin(theta);
+    float costheta = cos(theta);
+    matrix4x4 m;
+    m.m[0][0] = a.x() * a.x() + (1 - a.x() * a.x()) * costheta;
+    m.m[0][1] = a.x() * a.y() * (1 - costheta) - a.z() * sintheta;
+    m.m[0][2] = a.x() * a.z() * (1 - costheta) + a.y() * sintheta;
+    m.m[0][3] = 0;
+    m.m[1][0] = a.x() * a.y() * (1 - costheta) + a.z() * sintheta;
+    m.m[1][1] = a.y() * a.y() + (1 - a.y() * a.y()) * costheta;
+    m.m[1][2] = a.y() * a.z() * (1 - costheta) - a.x() * sintheta;
+    m.m[1][3] = 0;
+    m.m[2][0] = a.x() * a.z() * (1 - costheta) - a.y() * sintheta;
+    m.m[2][1] = a.y() * a.z() * (1 - costheta) + a.x() * sintheta;
+    m.m[2][2] = a.z() * a.z() + (1 - a.z() * a.z()) * costheta;
+    m.m[2][3] = 0;
+    m.m[3][0] = 0;
+    m.m[3][1] = 0;
+    m.m[3][2] = 0;
+    m.m[3][3] = 1;
+    return transform(m, m.transpose());
 }

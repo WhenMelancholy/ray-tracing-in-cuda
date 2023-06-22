@@ -80,8 +80,7 @@ render(int sample, camera **cam, hittable **world, int max_depth, int image_widt
 
     color res(0, 0, 0);
     for (int s = 0; s < sample; ++s) {
-        if (id == 0)
-            printf("sample: %d/%d\n", s, sample);
+//        printf("sample: %d/%d\n", s, sample);
         auto u = float(x + random_float(rng)) / (image_width - 1);
         auto v = float(y + random_float(rng)) / (image_height - 1);
         ray r = (*cam)->get_ray(u, v, rng);
