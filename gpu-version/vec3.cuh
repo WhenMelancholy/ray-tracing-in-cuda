@@ -332,6 +332,25 @@ public:
         else return point3(xp, yp, zp) / wp;
     }
 
+    __device__ __host__ vec3 apply_point(const point3 &p) const {
+        return (*this)(p);
+    }
+
+    __device__ __host__ vec3 apply_vec(const vec3 &p) const {
+        float x = p.x(), y = p.y(), z = p.z();
+        return vec3(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
+                    m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
+                    m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
+    }
+
+    // apply transform to normal vector p
+    __device__ __host__ vec3 apply_normal(const vec3 &p) const {
+        float x = p.x(), y = p.y(), z = p.z();
+        return vec3(m_inv.m[0][0] * x + m_inv.m[1][0] * y + m_inv.m[2][0] * z,
+                    m_inv.m[0][1] * x + m_inv.m[1][1] * y + m_inv.m[2][1] * z,
+                    m_inv.m[0][2] * x + m_inv.m[1][2] * y + m_inv.m[2][2] * z);
+    }
+
 private:
     matrix4x4 m, m_inv;
 };
@@ -371,4 +390,16 @@ __device__ __host__ transform rotate(const vec3 &axis, float theta) {
     m.m[3][2] = 0;
     m.m[3][3] = 1;
     return transform(m, m.transpose());
+}
+
+__device__ __host__ transform scale(float x, float y, float z) {
+    matrix4x4 m(x, 0, 0, 0,
+                0, y, 0, 0,
+                0, 0, z, 0,
+                0, 0, 0, 1);
+    matrix4x4 minv(1.f / x, 0, 0, 0,
+                   0, 1.f / y, 0, 0,
+                   0, 0, 1.f / z, 0,
+                   0, 0, 0, 1);
+    return transform(m, minv);
 }

@@ -3,7 +3,6 @@
 #include "material.cuh"
 #include "rtweekend.cuh"
 #include "texture.cuh"
-#include <assert.h>
 
 #include "color.cuh"
 
