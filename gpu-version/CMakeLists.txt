@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(parallel_compute CUDA CXX C)
+project(ray_tracing CUDA CXX C)
 
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD 20)
@@ -7,8 +7,7 @@ add_compile_definitions(BASIC_CUDA_VERSION)
 
 find_package(nlohmann_json CONFIG REQUIRED)
 
-add_executable(parallel_compute
-        main.cu
+set(COMMON_HEADERS
         camera.cuh
         color.cuh
         hittable.cuh
@@ -18,8 +17,18 @@ add_executable(parallel_compute
         rtweekend.cuh
         vec3.cuh
         texture.cuh
-        parser.hpp)
+        parser.hpp
+        )
+
+add_executable(parallel_compute main.cu ${COMMON_HEADERS})
+add_executable(parser parser.cu ${COMMON_HEADERS})
 
 set_target_properties(parallel_compute PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON)
-target_link_libraries(parallel_compute PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(parallel_compute nlohmann_json::nlohmann_json)
+
+set_target_properties(parser PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON)
+target_link_libraries(parser nlohmann_json::nlohmann_json)
+
+configure_file(sample_scene.json sample_scene.json COPYONLY)

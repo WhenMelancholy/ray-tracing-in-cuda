@@ -64,12 +64,13 @@ render(int sample, camera **cam, hittable **world, int max_depth, int image_widt
     curandState *rng = &states[id];
 
     color res(0, 0, 0);
+    color background(0.70, 0.8, 1.0);
     for (int s = 0; s < sample; ++s) {
 //        printf("sample: %d/%d\n", s, sample);
         auto u = float(x + random_float(rng)) / (image_width - 1);
         auto v = float(y + random_float(rng)) / (image_height - 1);
         ray r = (*cam)->get_ray(u, v, rng);
-        res += ray_color(r, color(0.70 / 10, 0.8 / 10, 1.0 / 10), world, max_depth, rng);
+        res += ray_color(r, background, world, max_depth, rng);
     }
     // UPDATE 将除以采样数的操作移动到了 kernel 函数内
     // UPDATE 还是将操作保留在 write_color 函数里吧
@@ -101,36 +102,38 @@ __global__ void
 random_scene(hittable **list, hittable **world, camera **cam, int image_width, int image_height, curandState *states,
              int num_of_objects) {
 
-    // UPDATE 添加小型场景进行测试
-    //    if (false) {
-    //        list[0] = new sphere(vec3(0, 0, -1), 0.5,
-    //                             new lambertian(vec3(0.1, 0.2, 0.5)));
-    //        list[1] = new sphere(vec3(0, -100.5, -1), 100,
-    //                             new lambertian(vec3(0.8, 0.8, 0.0)));
-    //        list[2] = new sphere(vec3(1, 0, -1), 0.5,
-    //                             new metal(vec3(0.8, 0.6, 0.2), 0.0));
-    //        list[3] = new sphere(vec3(-1, 0, -1), 0.5,
-    //                             new dielectric(1.5));
-    //        list[4] = new sphere(vec3(-1, 0, -1), -0.45,
-    //                             new dielectric(1.5));
-    //        *world = new hittable_list(list, 5);
-    //
-    //        // Camera
-    //        point3 lookfrom(13, 2, 3);
-    //        point3 lookat(0, 0, 0);
-    //        vec3 vup(0, 1, 0);
-    //        auto dist_to_focus = (lookfrom - lookat).length();
-    //        auto aperture = 0.1;
-    //        *cam = new camera(lookfrom, lookat, vup, 20, float(image_width) / float(image_height), aperture, dist_to_focus);
-    //
-    //        *cam = new camera(vec3(-2, 2, 1),
-    //                          vec3(0, 0, -1),
-    //                          vec3(0, 1, 0),
-    //                          20.0,
-    //                          float(image_width) / float(image_height), 0, dist_to_focus);
-    //
-    //        return;
-    //    }
+//     UPDATE 添加小型场景进行测试
+    if (true) {
+        list[0] = new sphere(vec3(0, 0, -1), 0.5,
+                             new lambertian(vec3(0.1, 0.2, 0.5)));
+        list[1] = new sphere(vec3(0, -100.5, -1), 100,
+                             new lambertian(vec3(0.8, 0.8, 0.0)));
+        list[2] = new sphere(vec3(1, 0, -1), 0.5,
+                             new metal(vec3(0.8, 0.6, 0.2), 0.0));
+        list[3] = new sphere(vec3(-1, 0, -1), 0.5,
+                             new dielectric(1.5));
+        list[4] = new sphere(vec3(-1, 0, -1), -0.45,
+                             new dielectric(1.5));
+        *world = new hittable_list(list, 5);
+
+        // Camera
+        point3 lookfrom(13, 2, 3);
+        point3 lookat(0, 0, 0);
+        vec3 vup(0, 1, 0);
+        auto dist_to_focus = (lookfrom - lookat).length();
+        auto aperture = 0.1;
+//        *cam = new camera(lookfrom, lookat, vup, 20, float(image_width) / float(image_height), aperture, dist_to_focus);
+
+        *cam = new camera(vec3(-2, 2, 1),
+                          vec3(0, 0, -1),
+                          vec3(0, 1, 0),
+                          20.0,
+                          float(image_width) / float(image_height),
+                          0,
+                          dist_to_focus);
+
+        return;
+    }
 
     int id = blockIdx.x;
     auto *rng = &states[id];
@@ -178,7 +181,14 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
         vec3 vup(0, 1, 0);
         auto dist_to_focus = (lookfrom - lookat).length();
         auto aperture = 0.1;
-        *cam = new camera(lookfrom, lookat, vup, 20, float(image_width) / float(image_height), aperture, dist_to_focus);
+        *cam = new camera(
+                lookfrom,
+                lookat,
+                vup,
+                20,
+                float(image_width) / float(image_height),
+                aperture,
+                dist_to_focus);
     }
 }
 

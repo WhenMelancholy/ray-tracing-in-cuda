@@ -2,6 +2,9 @@
 
 #include "rtweekend.cuh"
 #include "texture.cuh"
+#include "ray.cuh"
+#include "color.cuh"
+#include "hittable.cuh"
 
 #include <cuda.h>
 #include <curand_kernel.h>
@@ -22,10 +25,10 @@ public:
 
 class lambertian : public material {
 public:
-    __device__ lambertian(const color &a)
+    __device__ __host__ lambertian(const color &a)
             : albedo(new solid_color(a)) {}
 
-    __device__ lambertian(mytexture *a) : albedo(a) {}
+    __device__ __host__ lambertian(mytexture *a) : albedo(a) {}
 
     __device__ virtual bool scatter(
             const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
@@ -50,7 +53,7 @@ public:
 
 class metal : public material {
 public:
-    __device__ metal(const color &a, float f)
+    __device__ __host__ metal(const color &a, float f)
             : albedo(a), fuzz(f < 1 ? f : 1) {
     }
 
@@ -81,7 +84,7 @@ __device__ bool refract(const vec3 &v, const vec3 &n, float ni_over_nt, vec3 &re
 
 class dielectric : public material {
 public:
-    __device__ dielectric(float index_of_refraction)
+    __device__ __host__ dielectric(float index_of_refraction)
             : ir(index_of_refraction) {
     }
 
@@ -150,9 +153,9 @@ private:
 
 class diffuse_light : public material {
 public:
-    __device__ diffuse_light(mytexture *a) : emit(a) {}
+    __device__ __host__ diffuse_light(mytexture *a) : emit(a) {}
 
-    __device__ diffuse_light(color c) : emit(new solid_color(c)) {}
+    __device__ __host__ diffuse_light(color c) : emit(new solid_color(c)) {}
 
     __device__ virtual bool scatter(
             const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
