@@ -35,13 +35,14 @@ __device__ __host__ float clamp(float x, float min, float max) {
 }
 
 // debug 输出函数
-#define when(...) fprintf(stderr,__VA_ARGS__)
-#define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
+#define when(...) fprintf(stderr, __VA_ARGS__)
+#define checkCudaErrors(val) check_cuda((val), #val, __FILE__, __LINE__)
 
-void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line) {
+void check_cuda(cudaError_t result, char const *const func,
+                const char *const file, int const line) {
     if (result) {
-        std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
-                  file << ":" << line << " '" << func << "' \n";
+        std::cerr << "CUDA error = " << static_cast<unsigned int>(result)
+                  << " at " << file << ":" << line << " '" << func << "' \n";
         std::cerr << "Error string: " << cudaGetErrorString(result) << "\n";
         // Make sure we call CUDA Device Reset before exiting
         cudaDeviceReset();
@@ -53,6 +54,7 @@ class Managed {
 public:
     void *operator new(size_t len) {
         void *ptr;
+        printf("Allocating %zu bytes on the managed memory heap\n", len);
         checkCudaErrors(cudaMallocManaged(&ptr, len));
         checkCudaErrors(cudaDeviceSynchronize());
         return ptr;

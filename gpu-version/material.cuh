@@ -11,7 +11,7 @@
 
 struct hit_record;
 
-class material {
+class material : public Managed {
 public:
     // 需要使用 curand 库来实现随机数的产生
     __device__ virtual bool scatter(const ray &r_in, const hit_record &rec,
@@ -25,10 +25,9 @@ public:
 
 class lambertian : public material {
 public:
-    __device__ __host__ lambertian(const color &a)
-        : albedo(new solid_color(a)) {}
+    lambertian(const color &a) : albedo(new solid_color(a)) {}
 
-    __device__ __host__ lambertian(mytexture *a) : albedo(a) {}
+    lambertian(mytexture *a) : albedo(a) {}
 
     __device__ virtual bool scatter(const ray &r_in, const hit_record &rec,
                                     color &attenuation, ray &scattered,
@@ -53,8 +52,7 @@ public:
 
 class metal : public material {
 public:
-    __device__ __host__ metal(const color &a, float f)
-        : albedo(a), fuzz(f < 1 ? f : 1) {}
+    metal(const color &a, float f) : albedo(a), fuzz(f < 1 ? f : 1) {}
 
     __device__ virtual bool scatter(const ray &r_in, const hit_record &rec,
                                     color &attenuation, ray &scattered,
@@ -84,8 +82,7 @@ __device__ bool refract(const vec3 &v, const vec3 &n, float ni_over_nt,
 
 class dielectric : public material {
 public:
-    __device__ __host__ dielectric(float index_of_refraction)
-        : ir(index_of_refraction) {}
+    dielectric(float index_of_refraction) : ir(index_of_refraction) {}
 
     __device__ virtual bool scatter(const ray &r_in, const hit_record &rec,
                                     color &attenuation, ray &scattered,
@@ -156,9 +153,9 @@ private:
 
 class diffuse_light : public material {
 public:
-    __device__ __host__ diffuse_light(mytexture *a) : emit(a) {}
+    diffuse_light(mytexture *a) : emit(a) {}
 
-    __device__ __host__ diffuse_light(color c) : emit(new solid_color(c)) {}
+    diffuse_light(color c) : emit(new solid_color(c)) {}
 
     __device__ virtual bool scatter(const ray &r_in, const hit_record &rec,
                                     color &attenuation, ray &scattered,

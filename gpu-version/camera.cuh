@@ -4,11 +4,12 @@
 #include "ray.cuh"
 #include <cuda.h>
 
-class camera {
+class camera : public Managed {
 public:
-    __device__ __host__ camera(point3 lookfrom, point3 lookat, vec3 vup,
-                               float vfov, float aspect_ratio, float aperature,
-                               float focus_dist) {
+    camera() {}
+
+    camera(point3 lookfrom, point3 lookat, vec3 vup, float vfov,
+           float aspect_ratio, float aperature, float focus_dist) {
         float theta = degrees_to_radians(vfov);
         float h = tan(theta / 2.0f);
         float viewport_height = 2.0f * h;

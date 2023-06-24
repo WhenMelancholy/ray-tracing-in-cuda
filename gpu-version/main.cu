@@ -15,7 +15,7 @@
 
 // 计算光线 r 在 world 中的反射结果，最大深度为 depth
 __device__ color ray_color(const ray &r, const color &background,
-                           hittable **world, int depth, curandState *rng) {
+                           hittable *world, int depth, curandState *rng) {
     //    UPDATE: 改为递归运算，因为非递归需要用栈来合并最终结果
     ray now = r;
     color accumulated_attenuation(1.0f, 1.0f, 1.0f);
@@ -27,7 +27,16 @@ __device__ color ray_color(const ray &r, const color &background,
     while (depth > 0) {
         hit_record rec;
 
-        if ((*world)->hit(now, 0.001, FLT_MAX, rec)) {
+        printf("Hit\n");
+        hittable_list *world_list = (hittable_list *)world;
+        printf("world_list: %p\n", world_list);
+        printf("world_list->list: %d\n", world_list->len); // 正常工作
+        // print the address of world->hit
+        bool (hittable::*func_ptr)(const ray &, float, float, hit_record &)const  =
+            &hittable::hit; // 获取函数指针
+        printf("world->hit: %p\n", (void*)(world->*func_ptr));
+
+        if (world->hit(now, 0.001, FLT_MAX, rec)) { // 直接崩溃
             ray scattered;
             color attenuation;
             color emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
@@ -54,9 +63,9 @@ __device__ color ray_color(const ray &r, const color &background,
     return accumulated_color;
 }
 
-__global__ void render(int sample, camera **cam, hittable **world,
-                       int max_depth, int image_width, int image_height,
-                       color *image, curandState *states) {
+__global__ void render(int sample, camera *cam, hittable *world, int max_depth,
+                       int image_width, int image_height, color *image,
+                       curandState *states) {
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
     int id = y * image_width + x;
@@ -64,6 +73,10 @@ __global__ void render(int sample, camera **cam, hittable **world,
     if (x >= image_width)
         return;
     if (y >= image_height)
+        return;
+    if (x != 0)
+        return;
+    if (y != 0)
         return;
 
     curandState *rng = &states[id];
@@ -74,7 +87,7 @@ __global__ void render(int sample, camera **cam, hittable **world,
         //        printf("sample: %d/%d\n", s, sample);
         auto u = float(x + random_float(rng)) / (image_width - 1);
         auto v = float(y + random_float(rng)) / (image_height - 1);
-        ray r = (*cam)->get_ray(u, v, rng);
+        ray r = cam->get_ray(u, v, rng);
         res += ray_color(r, background, world, max_depth, rng);
     }
     // UPDATE 将除以采样数的操作移动到了 kernel 函数内
@@ -103,9 +116,10 @@ __global__ void init_random_library(curandState *state) {
 }
 
 // UPDATE 并行化世界生成
-__global__ void random_scene(hittable **list, hittable **world, camera **cam,
-                             int image_width, int image_height,
-                             curandState *states, int num_of_objects) {
+// UPDATE 使用了托管内存，不需要并行化生成了
+void random_scene(hittable **list, hittable *&world, camera *&cam,
+                  int image_width, int image_height, curandState *states,
+                  int num_of_objects) {
 
     //     UPDATE 添加小型场景进行测试
     if (true) {
@@ -117,7 +131,7 @@ __global__ void random_scene(hittable **list, hittable **world, camera **cam,
                              new metal(vec3(0.8, 0.6, 0.2), 0.0));
         list[3] = new sphere(vec3(-1, 0, -1), 0.5, new dielectric(1.5));
         list[4] = new sphere(vec3(-1, 0, -1), -0.45, new dielectric(1.5));
-        *world = new hittable_list(list, 5);
+        world = new hittable_list(list, 5);
 
         // Camera
         point3 lookfrom(13, 2, 3);
@@ -129,78 +143,12 @@ __global__ void random_scene(hittable **list, hittable **world, camera **cam,
         //        float(image_width) / float(image_height), aperture,
         //        dist_to_focus);
 
-        *cam = new camera(vec3(-2, 2, 1), vec3(0, 0, -1), vec3(0, 1, 0), 20.0,
-                          float(image_width) / float(image_height), 0,
-                          dist_to_focus);
+        cam = new camera(vec3(-2, 2, 1), vec3(0, 0, -1), vec3(0, 1, 0), 20.0,
+                         float(image_width) / float(image_height), 0,
+                         dist_to_focus);
 
         return;
     }
-
-    int id = blockIdx.x;
-    auto *rng = &states[id];
-
-    int a = id / 22 - 11;
-    int b = id % 22 - 11;
-    float choose_mat = random_float(rng);
-    vec3 center(a + 0.9 * random_float(rng), 0.2, b + 0.9 * random_float(rng));
-
-    material *sphere_material;
-
-    // 为了保证数量固定，球只要生成了就会加入到世界
-    if (choose_mat < 0.8f) {
-        auto albedo = color::random(rng) * color::random(rng);
-        sphere_material = new lambertian(albedo);
-        list[id] = new sphere(center, 0.2, sphere_material);
-    } else if (choose_mat < 0.95f) {
-        auto albedo = color::random(0.5, 1, rng);
-        auto fuzz = random_float(rng);
-        sphere_material = new metal(albedo, fuzz);
-        list[id] = new sphere(center, 0.2, sphere_material);
-    } else {
-        sphere_material = new dielectric(1.5);
-        list[id] = new sphere(center, 0.2, sphere_material);
-    }
-
-    if (id == 0) {
-        //        list[num_of_objects - 4] = new sphere(vec3(0, -1000.0, 0),
-        //        1000, new lambertian(vec3(0.5, 0.5, 0.5)));
-        list[num_of_objects - 4] =
-            new sphere(vec3(0, -1000.0, 0), 1000,
-                       new lambertian(new checker_texture(
-                           color(0.2, 0.3, 0.1), color(0.9, 0.9, 0.9))));
-        list[num_of_objects - 3] =
-            new sphere(vec3(0, 2, 0), 1.0, new dielectric(1.5));
-        list[num_of_objects - 2] = new sphere(
-            vec3(-4, 2, 0), 1.0, new lambertian(vec3(0.4, 0.2, 0.1)));
-
-        auto difflight = new diffuse_light(color(4, 4, 4));
-        auto rect_light = new xy_rect(3, 5, 1, 3, -2, difflight);
-        //        list[num_of_objects - 1] = new sphere(vec3(4, 2, 0), 1.0, new
-        //        metal(vec3(0.7, 0.6, 0.5), 0.0));;
-        auto cylinder_light = new cylinder(0.5, 0, 2, difflight);
-        list[num_of_objects - 1] = cylinder_light;
-
-        *world = new hittable_list(list, num_of_objects);
-
-        // Camera
-        point3 lookfrom(2, 2, -13);
-        point3 lookat(0, 0, 0);
-        vec3 vup(0, 1, 0);
-        auto dist_to_focus = (lookfrom - lookat).length();
-        auto aperture = 0.1;
-        *cam = new camera(lookfrom, lookat, vup, 20,
-                          float(image_width) / float(image_height), aperture,
-                          dist_to_focus);
-    }
-}
-
-__global__ void free_scene(hittable **list, hittable **world, camera **cam,
-                           int num_of_objects) {
-    for (int i = 0; i < num_of_objects; i++) {
-        delete list[i];
-    }
-    delete *world;
-    delete *cam;
 }
 
 int main(int argc, char *argv[]) {
@@ -208,14 +156,17 @@ int main(int argc, char *argv[]) {
     auto start = clock();
     when("Start counting time\n");
 
+    // 调整 cuda 堆栈大小
+    checkCudaErrors(cudaDeviceSetLimit(cudaLimitStackSize, 65536));
+
     // Init image
     constexpr auto aspect_ratio = 16.0 / 9.0;
     constexpr int image_width = 1600;
     constexpr int image_height = static_cast<int>(image_width / aspect_ratio);
     int max_depth = 50;
     int samples_per_pixel = 500;
-    const int num_of_objects = 22 * 22 + 1 + 3;
-    // const int num_of_objects = 3;
+    // const int num_of_objects = 22 * 22 + 1 + 3;
+    const int num_of_objects = 5;
 
     // 根据命令行参数设置图像参数
     // UPDATE 删去调整图像长宽的参数
@@ -254,17 +205,16 @@ int main(int argc, char *argv[]) {
     // 还是使用了指针实现，并且在显卡上创建 在 cuda
     // 的函数中创建世界和相机，因为要使用 new 创建，不方便使用 malloc
     // 直接创建然后拷贝
-    hittable **dev_lists, **dev_world;
-    camera **dev_camera;
-    checkCudaErrors(
-        cudaMalloc((void **)&dev_lists, sizeof(hittable *) * num_of_objects));
-    checkCudaErrors(cudaMalloc((void **)&dev_world, sizeof(hittable *)));
-    checkCudaErrors(cudaMalloc((void **)&dev_camera, sizeof(camera *)));
+    hittable **dev_lists, *dev_world;
+    camera *dev_camera;
+    checkCudaErrors(cudaMallocManaged((void **)&dev_lists,
+                                      sizeof(hittable *) * num_of_objects));
+    dev_world = nullptr;
+    dev_camera = nullptr;
     when("Finish the allocation of objects, world, camera\n");
 
-    random_scene<<<num_of_objects, 1>>>(dev_lists, dev_world, dev_camera,
-                                        image_width, image_height, states,
-                                        num_of_objects);
+    random_scene(dev_lists, dev_world, dev_camera, image_width, image_height,
+                 states, num_of_objects);
     when("Finish the creation of world, objects, camera\n");
 
     // 分配本地和显卡图像的空间
@@ -313,10 +263,8 @@ int main(int argc, char *argv[]) {
     // 清理退出程序
     // UPDATE 让操作系统去 free 把，free 不动了
     // free_scene<<<1, 1>>>(dev_lists, dev_world, dev_camera, num_of_objects);
-    checkCudaErrors(cudaFree(dev_lists));
-    checkCudaErrors(cudaFree(dev_world));
-    checkCudaErrors(cudaFree(dev_camera));
-    checkCudaErrors(cudaFree(dev_image));
-    checkCudaErrors(cudaFree(states));
+    // checkCudaErrors(cudaFree(dev_lists));
+    // checkCudaErrors(cudaFree(dev_image));
+    // checkCudaErrors(cudaFree(states));
     cudaDeviceReset();
 }
