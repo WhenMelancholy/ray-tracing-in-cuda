@@ -266,10 +266,12 @@ hittable_list **parser_world(json &data) {
                                       data["num_of_objects"].get<int>());
     data["world"]["host_ptr"] = reinterpret_cast<uintptr_t>(host_world);
 
-    hittable_list **dev_copy, **dev_world;
+    hittable_list **dev_copy, **dev_world, dev_hittable_list(
+            reinterpret_cast<hittable **>(data["objects"]["device_ptr"].get<uintptr_t>()),
+            data["num_of_objects"].get<int>());
     dev_copy = new hittable_list *[1];
-    dev_copy[0] = new hittable_list(reinterpret_cast<hittable **>(data["objects"]["device_ptr"].get<uintptr_t>()),
-                                    data["num_of_objects"].get<int>());
+    checkCudaErrors(cudaMalloc((void **) dev_copy[0], sizeof(hittable_list)));
+    checkCudaErrors(cudaMemcpy(dev_copy[0], &dev_hittable_list, sizeof(hittable_list), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMalloc((void **) &dev_world, sizeof(hittable_list *)));
     checkCudaErrors(cudaMemcpy(dev_world, dev_copy, sizeof(hittable_list *), cudaMemcpyHostToDevice));
     data["world"]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_world);
