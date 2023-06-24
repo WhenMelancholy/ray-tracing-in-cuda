@@ -6,14 +6,9 @@
 
 class camera {
 public:
-    __device__ __host__ camera(
-            point3 lookfrom,
-            point3 lookat,
-            vec3 vup,
-            float vfov,
-            float aspect_ratio,
-            float aperature,
-            float focus_dist) {
+    __device__ __host__ camera(point3 lookfrom, point3 lookat, vec3 vup,
+                               float vfov, float aspect_ratio, float aperature,
+                               float focus_dist) {
         float theta = degrees_to_radians(vfov);
         float h = tan(theta / 2.0f);
         float viewport_height = 2.0f * h;
@@ -26,20 +21,21 @@ public:
         origin = lookfrom;
         horizontal = focus_dist * viewport_width * u;
         vertical = focus_dist * viewport_height * v;
-        lower_left_corner = origin - horizontal / 2 - vertical / 2 - focus_dist * w;
+        lower_left_corner =
+            origin - horizontal / 2 - vertical / 2 - focus_dist * w;
 
         lens_radius = aperature / 2;
     }
 
-    // UPDATE camera ÀàÒ²ĞèÒªËæ»úÊıÉú³ÉÆ÷
+    // UPDATE camera ç±»ä¹Ÿéœ€è¦éšæœºæ•°ç”Ÿæˆå™¨
     __device__ ray get_ray(float s, float t, curandState *rng) const {
-        // UPDATE ½ûÓÃÄ£ºıÑ¡Ïî
+        // UPDATE ç¦ç”¨æ¨¡ç³Šé€‰é¡¹
         vec3 rd(0, 0, 0);
-//        vec3 rd = lens_radius * random_in_unit_disk(rng);
+        //        vec3 rd = lens_radius * random_in_unit_disk(rng);
         vec3 offset = u * rd.x() + v * rd.y();
 
-        return ray(origin + offset,
-                   lower_left_corner + s * horizontal + t * vertical - origin - offset);
+        return ray(origin + offset, lower_left_corner + s * horizontal +
+                                        t * vertical - origin - offset);
     }
 
 private:

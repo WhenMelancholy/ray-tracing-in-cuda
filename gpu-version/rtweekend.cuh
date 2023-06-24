@@ -16,8 +16,8 @@ __device__ __host__ float degrees_to_radians(float degrees) {
     return degrees * pi / 180.0f;
 }
 
-// UPDATE Ó¦¸ÃÊ¹ÓÃ uniform£¬normal ÊÇÕıÌ¬·Ö²¼
-// UPDATE ÔÚÉè±¸¶ËÖĞĞèÒªÊ¹ÓÃ curand ¿âÉú³ÉËæ»úÊı
+// UPDATE åº”è¯¥ä½¿ç”¨ uniformï¼Œnormal æ˜¯æ­£æ€åˆ†å¸ƒ
+// UPDATE åœ¨è®¾å¤‡ç«¯ä¸­éœ€è¦ä½¿ç”¨ curand åº“ç”Ÿæˆéšæœºæ•°
 __device__ float random_float(curandState *state) {
     return curand_uniform(state);
 }
@@ -34,7 +34,7 @@ __device__ __host__ float clamp(float x, float min, float max) {
     return x;
 }
 
-// debug Êä³öº¯Êı
+// debug è¾“å‡ºå‡½æ•°
 #define when(...) fprintf(stderr,__VA_ARGS__)
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 

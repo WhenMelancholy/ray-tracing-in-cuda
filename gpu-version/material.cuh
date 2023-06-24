@@ -13,10 +13,10 @@ struct hit_record;
 
 class material {
 public:
-    // ĞèÒªÊ¹ÓÃ curand ¿âÀ´ÊµÏÖËæ»úÊıµÄ²úÉú
-    __device__ virtual bool scatter(
-            const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
-            curandState *state) const = 0;
+    // éœ€è¦ä½¿ç”¨ curand åº“æ¥å®ç°éšæœºæ•°çš„äº§ç”Ÿ
+    __device__ virtual bool scatter(const ray &r_in, const hit_record &rec,
+                                    color &attenuation, ray &scattered,
+                                    curandState *state) const = 0;
 
     __device__ virtual color emitted(float u, float v, const point3 &p) const {
         return color(0, 0, 0);
@@ -26,19 +26,19 @@ public:
 class lambertian : public material {
 public:
     __device__ __host__ lambertian(const color &a)
-            : albedo(new solid_color(a)) {}
+        : albedo(new solid_color(a)) {}
 
     __device__ __host__ lambertian(mytexture *a) : albedo(a) {}
 
-    __device__ virtual bool scatter(
-            const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
-            curandState *state) const override {
-        // UPDATE ½« random_in_unit_vector Ìæ»»ÈÔÈ»»áÓĞäÖÈ¾´íÎó
-        // µ«ÊÇ½á¹ûÃ÷ÏÔ²»Í¬
+    __device__ virtual bool scatter(const ray &r_in, const hit_record &rec,
+                                    color &attenuation, ray &scattered,
+                                    curandState *state) const override {
+        // UPDATE å°† random_in_unit_vector æ›¿æ¢ä»ç„¶ä¼šæœ‰æ¸²æŸ“é”™è¯¯
+        // ä½†æ˜¯ç»“æœæ˜æ˜¾ä¸åŒ
         auto scatter_direction = rec.normal + random_in_unit_sphere(state);
 
-        //  UPDATE ³¢ÊÔÉ¾È¥¶ÔÎ¢Èõ¹âÏßµÄÌØÅĞ
-        // ²¢²»ÊÇ´Ë´¦ÒıÆğµÄäÖÈ¾´íÎó
+        //  UPDATE å°è¯•åˆ å»å¯¹å¾®å¼±å…‰çº¿çš„ç‰¹åˆ¤
+        // å¹¶ä¸æ˜¯æ­¤å¤„å¼•èµ·çš„æ¸²æŸ“é”™è¯¯
         if (scatter_direction.near_zero())
             scatter_direction = rec.normal;
 
@@ -54,12 +54,11 @@ public:
 class metal : public material {
 public:
     __device__ __host__ metal(const color &a, float f)
-            : albedo(a), fuzz(f < 1 ? f : 1) {
-    }
+        : albedo(a), fuzz(f < 1 ? f : 1) {}
 
-    __device__ virtual bool scatter(
-            const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
-            curandState *state) const override {
+    __device__ virtual bool scatter(const ray &r_in, const hit_record &rec,
+                                    color &attenuation, ray &scattered,
+                                    curandState *state) const override {
         vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
         scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere(state));
         attenuation = albedo;
@@ -71,7 +70,8 @@ public:
     float fuzz;
 };
 
-__device__ bool refract(const vec3 &v, const vec3 &n, float ni_over_nt, vec3 &refracted) {
+__device__ bool refract(const vec3 &v, const vec3 &n, float ni_over_nt,
+                        vec3 &refracted) {
     vec3 uv = unit_vector(v);
     float dt = dot(uv, n);
     float discriminant = 1.0f - ni_over_nt * ni_over_nt * (1 - dt * dt);
@@ -85,13 +85,12 @@ __device__ bool refract(const vec3 &v, const vec3 &n, float ni_over_nt, vec3 &re
 class dielectric : public material {
 public:
     __device__ __host__ dielectric(float index_of_refraction)
-            : ir(index_of_refraction) {
-    }
+        : ir(index_of_refraction) {}
 
-    __device__ virtual bool scatter(
-            const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
-            curandState *state) const override {
-        // UPDATE ²âÊÔ²»Í¬µÄ²ÄÖÊÊµÏÖ»á²»»á´øÀ´²»Í¬µÄäÖÈ¾½á¹û
+    __device__ virtual bool scatter(const ray &r_in, const hit_record &rec,
+                                    color &attenuation, ray &scattered,
+                                    curandState *state) const override {
+        // UPDATE æµ‹è¯•ä¸åŒçš„æè´¨å®ç°ä¼šä¸ä¼šå¸¦æ¥ä¸åŒçš„æ¸²æŸ“ç»“æœ
         if (false) {
             vec3 outward_normal;
             vec3 reflected = reflect(r_in.direction(), rec.normal);
@@ -103,14 +102,17 @@ public:
             if (dot(r_in.direction(), rec.normal) > 0.0f) {
                 outward_normal = -rec.normal;
                 ni_over_nt = ir;
-                cosine = dot(r_in.direction(), rec.normal) / r_in.direction().length();
+                cosine = dot(r_in.direction(), rec.normal) /
+                         r_in.direction().length();
                 cosine = sqrt(1.0f - ir * ir * (1 - cosine * cosine));
             } else {
                 outward_normal = rec.normal;
                 ni_over_nt = 1.0f / ir;
-                cosine = -dot(r_in.direction(), rec.normal) / r_in.direction().length();
+                cosine = -dot(r_in.direction(), rec.normal) /
+                         r_in.direction().length();
             }
-            if (refract(r_in.direction(), outward_normal, ni_over_nt, refracted))
+            if (refract(r_in.direction(), outward_normal, ni_over_nt,
+                        refracted))
                 reflect_prob = reflectance(cosine, ir);
             else
                 reflect_prob = 1.0f;
@@ -131,7 +133,8 @@ public:
         bool cannot_refract = refraction_ratio * sin_theta > 1.0;
         vec3 direction;
 
-        if (cannot_refract || reflectance(cos_theta, refraction_ratio) > random_float(state))
+        if (cannot_refract ||
+            reflectance(cos_theta, refraction_ratio) > random_float(state))
             direction = reflect(unit_direction, rec.normal);
         else
             direction = refract(unit_direction, rec.normal, refraction_ratio);
@@ -157,13 +160,14 @@ public:
 
     __device__ __host__ diffuse_light(color c) : emit(new solid_color(c)) {}
 
-    __device__ virtual bool scatter(
-            const ray &r_in, const hit_record &rec, color &attenuation, ray &scattered,
-            curandState *state) const override {
+    __device__ virtual bool scatter(const ray &r_in, const hit_record &rec,
+                                    color &attenuation, ray &scattered,
+                                    curandState *state) const override {
         return false;
     }
 
-    __device__ virtual color emitted(float u, float v, const point3 &p) const override {
+    __device__ virtual color emitted(float u, float v,
+                                     const point3 &p) const override {
         return emit->value(u, v, p);
     }
 

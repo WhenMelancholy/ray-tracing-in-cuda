@@ -18,7 +18,7 @@ void write_color(std::ostream &out, color c, int samples_per_pixel,
     auto g = c.y();
     auto b = c.z();
 
-    // UPDATE ∑¢œ÷¥Ê‘⁄ r<0 g<0 b<0 µƒ«Èøˆ£¨ø™ º debug
+    // UPDATE ÂèëÁé∞Â≠òÂú® r<0 g<0 b<0 ÁöÑÊÉÖÂÜµÔºåÂºÄÂßã debug
     if (r < 0 || g < 0 || b < 0) {
         fprintf(stderr, "error color value less than 0\n");
     }
@@ -45,7 +45,7 @@ void write_color(FILE *file, color c, int samples_per_pixel,
     auto g = c.y();
     auto b = c.z();
 
-    // UPDATE ∑¢œ÷¥Ê‘⁄ r<0 g<0 b<0 µƒ«Èøˆ£¨ø™ º debug
+    // UPDATE ÂèëÁé∞Â≠òÂú® r<0 g<0 b<0 ÁöÑÊÉÖÂÜµÔºåÂºÄÂßã debug
     if (r < 0 || g < 0 || b < 0) {
         fprintf(stderr, "error color value less than 0\n");
     }
@@ -61,8 +61,7 @@ void write_color(FILE *file, color c, int samples_per_pixel,
         b = sqrt(b);
     }
 
-    fprintf(file, "%d %d %d\n",
-            static_cast<int>(256 * clamp(r, 0.0, 0.999)),
+    fprintf(file, "%d %d %d\n", static_cast<int>(256 * clamp(r, 0.0, 0.999)),
             static_cast<int>(256 * clamp(g, 0.0, 0.999)),
             static_cast<int>(256 * clamp(b, 0.0, 0.999)));
 }

@@ -454,3 +454,8 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+
+# 添加 Linux Cmake 的 gitignore
+build/
+# 添加 vscode 的 gitignore
+.vscode/

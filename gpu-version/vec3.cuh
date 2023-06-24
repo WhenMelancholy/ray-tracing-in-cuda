@@ -8,9 +8,9 @@
 
 class vec3 {
 public:
-    // UPDATE Õâ¸öÎÄ¼þÖÐµÄËæ»úÊýÏà¹Ø´úÂë¾ùÐèÒªÉ¾³ý£¬Ê¹ÓÃ curand ¿âÖØÐÂÊµÏÖ
-    // Ò»¸öÊ®·ÖÉñÆæµÄ±àÒëÎÊÌâ£¬¼ÙÈçÉ¾µôÁËÏÂÃæÕâ¸ö¿ÕÐÐ£¬¾Í»áµ¼ÖÂ±àÒë´íÎó
-    // ¸ù¾Ý²âÊÔ£¬¿ÉÄÜÊÇÐÐÄ©»»ÐÐ·û+ÎÄ¼þ±àÂë¹²Í¬ÒýÆðµÄÎÊÌâ
+    // UPDATE è¿™ä¸ªæ–‡ä»¶ä¸­çš„éšæœºæ•°ç›¸å…³ä»£ç å‡éœ€è¦åˆ é™¤ï¼Œä½¿ç”¨ curand åº“é‡æ–°å®žçŽ°
+    // ä¸€ä¸ªååˆ†ç¥žå¥‡çš„ç¼–è¯‘é—®é¢˜ï¼Œå‡å¦‚åˆ æŽ‰äº†ä¸‹é¢è¿™ä¸ªç©ºè¡Œï¼Œå°±ä¼šå¯¼è‡´ç¼–è¯‘é”™è¯¯
+    // æ ¹æ®æµ‹è¯•ï¼Œå¯èƒ½æ˜¯è¡Œæœ«æ¢è¡Œç¬¦+æ–‡ä»¶ç¼–ç å…±åŒå¼•èµ·çš„é—®é¢˜
     static __device__ vec3 random(curandState *state) {
         return {random_float(state), random_float(state), random_float(state)};
     }
@@ -21,13 +21,9 @@ public:
     }
 
 public:
-    __host__ __device__ vec3()
-            : e{0, 0, 0} {
-    }
+    __host__ __device__ vec3() : e{0, 0, 0} {}
 
-    __host__ __device__ vec3(float e0, float e1, float e2)
-            : e{e0, e1, e2} {
-    }
+    __host__ __device__ vec3(float e0, float e1, float e2) : e{e0, e1, e2} {}
 
     __host__ __device__ float x() const { return e[0]; }
 
@@ -35,7 +31,9 @@ public:
 
     __host__ __device__ float z() const { return e[2]; }
 
-    __host__ __device__ vec3 operator-() const { return vec3(-e[0], -e[1], -e[2]); }
+    __host__ __device__ vec3 operator-() const {
+        return vec3(-e[0], -e[1], -e[2]);
+    }
 
     __host__ __device__ float operator[](int i) const { return e[i]; }
 
@@ -55,7 +53,9 @@ public:
         return *this;
     }
 
-    __host__ __device__ vec3 &operator/=(const float t) { return *this *= 1 / t; }
+    __host__ __device__ vec3 &operator/=(const float t) {
+        return *this *= 1 / t;
+    }
 
     __host__ __device__ float length() const { return sqrt(length_squared()); }
 
@@ -122,7 +122,8 @@ __host__ __device__ vec3 reflect(const vec3 &v, const vec3 &n) {
 
 using std::min;
 
-__host__ __device__ vec3 refract(const vec3 &uv, const vec3 &n, float etai_over_etat) {
+__host__ __device__ vec3 refract(const vec3 &uv, const vec3 &n,
+                                 float etai_over_etat) {
     auto cos_theta = min(dot(-uv, n), 1.0f);
     vec3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
     vec3 r_out_parallel = -sqrt(fabs(1.0f - r_out_perp.length_squared())) * n;
@@ -131,7 +132,8 @@ __host__ __device__ vec3 refract(const vec3 &uv, const vec3 &n, float etai_over_
 
 __device__ vec3 random_in_unit_sphere(curandState *state) {
     for (;;) {
-        auto p = vec3(random_float(state), random_float(state), random_float(state));
+        auto p =
+            vec3(random_float(state), random_float(state), random_float(state));
         if (p.length_squared() >= 1)
             continue;
         return p;
@@ -144,7 +146,8 @@ __device__ vec3 random_unit_vector(curandState *state) {
 
 __device__ vec3 random_in_unit_disk(curandState *state) {
     while (true) {
-        auto p = vec3(random_float(-1, 1, state), random_float(-1, 1, state), 0);
+        auto p =
+            vec3(random_float(-1, 1, state), random_float(-1, 1, state), 0);
         if (p.length_squared() >= 1)
             continue;
         return p;
@@ -198,9 +201,8 @@ struct matrix4x4 {
 
     // Transpose this matrix
     __device__ __host__ matrix4x4 transpose() const {
-        return matrix4x4(m[0][0], m[1][0], m[2][0], m[3][0],
-                         m[0][1], m[1][1], m[2][1], m[3][1],
-                         m[0][2], m[1][2], m[2][2], m[3][2],
+        return matrix4x4(m[0][0], m[1][0], m[2][0], m[3][0], m[0][1], m[1][1],
+                         m[2][1], m[3][1], m[0][2], m[1][2], m[2][2], m[3][2],
                          m[0][3], m[1][3], m[2][3], m[3][3]);
     }
 
@@ -209,10 +211,8 @@ struct matrix4x4 {
         matrix4x4 r;
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j)
-                r.m[i][j] = m[i][0] * rhs.m[0][j] +
-                            m[i][1] * rhs.m[1][j] +
-                            m[i][2] * rhs.m[2][j] +
-                            m[i][3] * rhs.m[3][j];
+                r.m[i][j] = m[i][0] * rhs.m[0][j] + m[i][1] * rhs.m[1][j] +
+                            m[i][2] * rhs.m[2][j] + m[i][3] * rhs.m[3][j];
         return r;
     }
 
@@ -243,23 +243,27 @@ struct matrix4x4 {
             ++ipiv[icol];
             // Swap rows _irow_ and _icol_ for pivot
             if (irow != icol) {
-                for (int k = 0; k < 4; ++k) std::swap(minv[irow][k], minv[icol][k]);
+                for (int k = 0; k < 4; ++k)
+                    std::swap(minv[irow][k], minv[icol][k]);
             }
             indxr[i] = irow;
             indxc[i] = icol;
-            if (minv[icol][icol] == 0.f) printf("Singular matrix in MatrixInvert");
+            if (minv[icol][icol] == 0.f)
+                printf("Singular matrix in MatrixInvert");
 
             // Set $m[icol][icol]$ to one by scaling row _icol_ appropriately
             float pivinv = 1. / minv[icol][icol];
             minv[icol][icol] = 1.;
-            for (int j = 0; j < 4; j++) minv[icol][j] *= pivinv;
+            for (int j = 0; j < 4; j++)
+                minv[icol][j] *= pivinv;
 
             // Subtract this row from others to zero out their columns
             for (int j = 0; j < 4; j++) {
                 if (j != icol) {
                     float save = minv[j][icol];
                     minv[j][icol] = 0;
-                    for (int k = 0; k < 4; k++) minv[j][k] -= minv[icol][k] * save;
+                    for (int k = 0; k < 4; k++)
+                        minv[j][k] -= minv[icol][k] * save;
                 }
             }
         }
@@ -275,10 +279,12 @@ struct matrix4x4 {
 
     // Check if matrix is identity
     __device__ __host__ bool is_identity() const {
-        return m[0][0] == 1.f && m[0][1] == 0.f && m[0][2] == 0.f && m[0][3] == 0.f &&
-               m[1][0] == 0.f && m[1][1] == 1.f && m[1][2] == 0.f && m[1][3] == 0.f &&
-               m[2][0] == 0.f && m[2][1] == 0.f && m[2][2] == 1.f && m[2][3] == 0.f &&
-               m[3][0] == 0.f && m[3][1] == 0.f && m[3][2] == 0.f && m[3][3] == 1.f;
+        return m[0][0] == 1.f && m[0][1] == 0.f && m[0][2] == 0.f &&
+               m[0][3] == 0.f && m[1][0] == 0.f && m[1][1] == 1.f &&
+               m[1][2] == 0.f && m[1][3] == 0.f && m[2][0] == 0.f &&
+               m[2][1] == 0.f && m[2][2] == 1.f && m[2][3] == 0.f &&
+               m[3][0] == 0.f && m[3][1] == 0.f && m[3][2] == 0.f &&
+               m[3][3] == 1.f;
     }
 
     float m[4][4];
@@ -289,32 +295,44 @@ public:
     __device__ __host__ transform() {}
 
     __device__ __host__ transform(const float mat[4][4]) {
-        m = matrix4x4(mat[0][0], mat[0][1], mat[0][2], mat[0][3],
-                      mat[1][0], mat[1][1], mat[1][2], mat[1][3],
-                      mat[2][0], mat[2][1], mat[2][2], mat[2][3],
-                      mat[3][0], mat[3][1], mat[3][2], mat[3][3]);
+        m = matrix4x4(mat[0][0], mat[0][1], mat[0][2], mat[0][3], mat[1][0],
+                      mat[1][1], mat[1][2], mat[1][3], mat[2][0], mat[2][1],
+                      mat[2][2], mat[2][3], mat[3][0], mat[3][1], mat[3][2],
+                      mat[3][3]);
         m_inv = m.inverse();
     }
 
-    __device__ __host__ transform(const matrix4x4 &mat) : m(mat), m_inv(mat.inverse()) {}
+    __device__ __host__ transform(const matrix4x4 &mat)
+        : m(mat), m_inv(mat.inverse()) {}
 
-    __device__ __host__ transform(const matrix4x4 &mat, const matrix4x4 &minv) : m(mat), m_inv(minv) {}
+    __device__ __host__ transform(const matrix4x4 &mat, const matrix4x4 &minv)
+        : m(mat), m_inv(minv) {}
 
-    __device__ __host__ transform inverse() const { return transform(m_inv, m); }
+    __device__ __host__ transform inverse() const {
+        return transform(m_inv, m);
+    }
 
-    __device__ __host__ transform transpose() const { return transform(m.transpose(), m_inv.transpose()); }
+    __device__ __host__ transform transpose() const {
+        return transform(m.transpose(), m_inv.transpose());
+    }
 
     __device__ __host__ bool is_identity() const { return m.is_identity(); }
 
     // operator == and operator !=
-    __device__ __host__ bool operator==(const transform &t) const { return t.m == m && t.m_inv == m_inv; }
+    __device__ __host__ bool operator==(const transform &t) const {
+        return t.m == m && t.m_inv == m_inv;
+    }
 
-    __device__ __host__ bool operator!=(const transform &t) const { return t.m != m || t.m_inv != m_inv; }
+    __device__ __host__ bool operator!=(const transform &t) const {
+        return t.m != m || t.m_inv != m_inv;
+    }
 
     // get matrix or get inverse matrix
     __device__ __host__ const matrix4x4 &get_matrix() const { return m; }
 
-    __device__ __host__ const matrix4x4 &get_inverse_matrix() const { return m_inv; }
+    __device__ __host__ const matrix4x4 &get_inverse_matrix() const {
+        return m_inv;
+    }
 
     // operator *
     __device__ __host__ transform operator*(const transform &t) const {
@@ -328,8 +346,10 @@ public:
         float yp = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z + m.m[1][3];
         float zp = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z + m.m[2][3];
         float wp = m.m[3][0] * x + m.m[3][1] * y + m.m[3][2] * z + m.m[3][3];
-        if (wp == 1.) return point3(xp, yp, zp);
-        else return point3(xp, yp, zp) / wp;
+        if (wp == 1.)
+            return point3(xp, yp, zp);
+        else
+            return point3(xp, yp, zp) / wp;
     }
 
     __device__ __host__ vec3 apply_point(const point3 &p) const {
@@ -357,14 +377,10 @@ private:
 
 // common transforms
 __device__ __host__ transform translate(const vec3 &delta) {
-    matrix4x4 m(1, 0, 0, delta.x(),
-                0, 1, 0, delta.y(),
-                0, 0, 1, delta.z(),
-                0, 0, 0, 1);
-    matrix4x4 minv(1, 0, 0, -delta.x(),
-                   0, 1, 0, -delta.y(),
-                   0, 0, 1, -delta.z(),
-                   0, 0, 0, 1);
+    matrix4x4 m(1, 0, 0, delta.x(), 0, 1, 0, delta.y(), 0, 0, 1, delta.z(), 0,
+                0, 0, 1);
+    matrix4x4 minv(1, 0, 0, -delta.x(), 0, 1, 0, -delta.y(), 0, 0, 1,
+                   -delta.z(), 0, 0, 0, 1);
     return transform(m, minv);
 }
 
@@ -393,13 +409,8 @@ __device__ __host__ transform rotate(const vec3 &axis, float theta) {
 }
 
 __device__ __host__ transform scale(float x, float y, float z) {
-    matrix4x4 m(x, 0, 0, 0,
-                0, y, 0, 0,
-                0, 0, z, 0,
-                0, 0, 0, 1);
-    matrix4x4 minv(1.f / x, 0, 0, 0,
-                   0, 1.f / y, 0, 0,
-                   0, 0, 1.f / z, 0,
-                   0, 0, 0, 1);
+    matrix4x4 m(x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1);
+    matrix4x4 minv(1.f / x, 0, 0, 0, 0, 1.f / y, 0, 0, 0, 0, 1.f / z, 0, 0, 0,
+                   0, 1);
     return transform(m, minv);
 }

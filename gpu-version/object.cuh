@@ -5,7 +5,8 @@
 
 #include <cuda.h>
 
-// FIX ÓÉÓÚ device_vector ÎÞ·¨ÔÚ device º¯ÊýÖÐÊ¹ÓÃ£¨Ã»ÕÒµ½·½·¨£©£¬Òò´Ë¸ÄÓÃÖ¸ÕëÊµÏÖ
+// FIX ç”±äºŽ device_vector æ— æ³•åœ¨ device
+// å‡½æ•°ä¸­ä½¿ç”¨ï¼ˆæ²¡æ‰¾åˆ°æ–¹æ³•ï¼‰ï¼Œå› æ­¤æ”¹ç”¨æŒ‡é’ˆå®žçŽ°
 class hittable_list : public hittable {
 public:
     int len;
@@ -40,8 +41,7 @@ public:
     __device__ __host__ sphere() {}
 
     __device__ __host__ sphere(point3 cen, float r, material *m)
-            : center(cen), radius(r), mat_ptr(m) {
-    }
+        : center(cen), radius(r), mat_ptr(m) {}
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
@@ -73,9 +73,9 @@ public:
         return true;
     }
 
-//    __device__ virtual ~sphere() override {
-//        delete mat_ptr;
-//    }
+    //    __device__ virtual ~sphere() override {
+    //        delete mat_ptr;
+    //    }
 
 public:
     point3 center;
@@ -96,8 +96,9 @@ class xy_rect : public hittable {
 public:
     __device__ __host__ xy_rect() {}
 
-    __device__ __host__ xy_rect(float _x0, float _x1, float _y0, float _y1, float _k, material *mat)
-            : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat) {};
+    __device__ __host__ xy_rect(float _x0, float _x1, float _y0, float _y1,
+                                float _k, material *mat)
+        : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat){};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
@@ -118,9 +119,9 @@ public:
         return true;
     }
 
-//    __device__ virtual ~xy_rect() override {
-//        delete mp;
-//    }
+    //    __device__ virtual ~xy_rect() override {
+    //        delete mp;
+    //    }
 
 public:
     material *mp;
@@ -129,10 +130,11 @@ public:
 
 class xz_rect : public hittable {
 public:
-    __device__ __host__ xz_rect() {};
+    __device__ __host__ xz_rect(){};
 
-    __device__ __host__ xz_rect(float _x0, float _x1, float _z0, float _z1, float _k, material *mat)
-            : x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat) {};
+    __device__ __host__ xz_rect(float _x0, float _x1, float _z0, float _z1,
+                                float _k, material *mat)
+        : x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat){};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
@@ -160,10 +162,11 @@ public:
 
 class yz_rect : public hittable {
 public:
-    __device__ __host__ yz_rect() {};
+    __device__ __host__ yz_rect(){};
 
-    __device__ __host__ yz_rect(float _y0, float _y1, float _z0, float _z1, float _k, material *mat)
-            : y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat) {};
+    __device__ __host__ yz_rect(float _y0, float _y1, float _z0, float _z1,
+                                float _k, material *mat)
+        : y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat){};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
@@ -189,7 +192,8 @@ public:
     float y0{}, y1{}, z0{}, z1{}, k{};
 };
 
-__device__ __host__ bool quadratic(float a, float b, float c, float &t0, float &t1) {
+__device__ __host__ bool quadratic(float a, float b, float c, float &t0,
+                                   float &t1) {
     float delta = b * b - 4 * a * c;
     if (delta < 0)
         return false;
@@ -212,14 +216,16 @@ __device__ __host__ bool quadratic(float a, float b, float c, float &t0, float &
 
 class cylinder : public hittable {
 public:
-    __device__ __host__ cylinder() {};
+    __device__ __host__ cylinder(){};
 
-    __device__ __host__ cylinder(float _radius, float _zmin, float _zmax, material *mat)
-            : radius(_radius), zmin(_zmin), zmax(_zmax), mat_ptr(mat) {};
+    __device__ __host__ cylinder(float _radius, float _zmin, float _zmax,
+                                 material *mat)
+        : radius(_radius), zmin(_zmin), zmax(_zmax), mat_ptr(mat){};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
-        auto dx = r.direction().x(), dy = r.direction().y(), dz = r.direction().z();
+        auto dx = r.direction().x(), dy = r.direction().y(),
+             dz = r.direction().z();
         auto ox = r.origin().x(), oy = r.origin().y(), oz = r.origin().z();
         // solve quadratic equation for t values
         float a = dx * dx + dy * dy;
@@ -238,7 +244,8 @@ public:
         }
         // compute sphere hit position and phi and fill hit record
         rec.p = r.at(t);
-        rec.set_face_normal(r, vec3((rec.p.x() - ox) / radius, (rec.p.y() - oy) / radius, 0));
+        rec.set_face_normal(
+            r, vec3((rec.p.x() - ox) / radius, (rec.p.y() - oy) / radius, 0));
         rec.mat_ptr = mat_ptr;
         rec.t = t;
 

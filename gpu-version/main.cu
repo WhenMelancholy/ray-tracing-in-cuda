@@ -8,19 +8,22 @@
 #include "parser.hpp"
 
 #include <iostream>
+#include <cfloat>
 #include <cstdio>
 #include <cuda.h>
 #include <curand_kernel.h>
 
-// ¼ÆËã¹âÏß r ÔÚ world ÖĞµÄ·´Éä½á¹û£¬×î´óÉî¶ÈÎª depth
-__device__ color ray_color(const ray &r, const color &background, hittable **world, int depth, curandState *rng) {
-//    UPDATE: ¸ÄÎªµİ¹éÔËËã£¬ÒòÎª·Çµİ¹éĞèÒªÓÃÕ»À´ºÏ²¢×îÖÕ½á¹û
+// è®¡ç®—å…‰çº¿ r åœ¨ world ä¸­çš„åå°„ç»“æœï¼Œæœ€å¤§æ·±åº¦ä¸º depth
+__device__ color ray_color(const ray &r, const color &background,
+                           hittable **world, int depth, curandState *rng) {
+    //    UPDATE: æ”¹ä¸ºé€’å½’è¿ç®—ï¼Œå› ä¸ºéé€’å½’éœ€è¦ç”¨æ ˆæ¥åˆå¹¶æœ€ç»ˆç»“æœ
     ray now = r;
     color accumulated_attenuation(1.0f, 1.0f, 1.0f);
     color accumulated_color(0.0f, 0.0f, 0.0f);
-    // UPDATE ½« hittable Óë material ÀàÕûºÏµ½Ò»Æğ£¬·½±ãÊı¾İ´«Êä
-    // UPDATE ½«µİ¹éµ÷ÓÃ¸ÄÎªÑ­»·ÅĞ¶Ï£¬ÊÊÓ¦ cuda µÄ¼ÆËã
-    // UPDATE ÈÔÈ»½« hittable Óë material Àà·Ö¿ª£¬µ«ÊÇ hittable ÔÚ¿½±´µ½ÏÔ´æºóĞèÒªÖØĞÂÉèÖÃ material µÄÖ¸Õë
+    // UPDATE å°† hittable ä¸ material ç±»æ•´åˆåˆ°ä¸€èµ·ï¼Œæ–¹ä¾¿æ•°æ®ä¼ è¾“
+    // UPDATE å°†é€’å½’è°ƒç”¨æ”¹ä¸ºå¾ªç¯åˆ¤æ–­ï¼Œé€‚åº” cuda çš„è®¡ç®—
+    // UPDATE ä»ç„¶å°† hittable ä¸ material ç±»åˆ†å¼€ï¼Œä½†æ˜¯ hittable
+    // åœ¨æ‹·è´åˆ°æ˜¾å­˜åéœ€è¦é‡æ–°è®¾ç½® material çš„æŒ‡é’ˆ
     while (depth > 0) {
         hit_record rec;
 
@@ -36,73 +39,75 @@ __device__ color ray_color(const ray &r, const color &background, hittable **wor
                 now = scattered;
                 continue;
             } else {
-                // Ã»ÓĞ·´Éä£¬·µ»Ø×Ô·¢¹â
+                // æ²¡æœ‰åå°„ï¼Œè¿”å›è‡ªå‘å…‰
                 accumulated_color += accumulated_attenuation * emitted;
                 break;
             }
         } else {
-            // Ã»ÓĞÅöµ½ÎïÌå£¬·µ»Ø»·¾³ÑÕÉ«
+            // æ²¡æœ‰ç¢°åˆ°ç‰©ä½“ï¼Œè¿”å›ç¯å¢ƒé¢œè‰²
             accumulated_color += accumulated_attenuation * background;
             break;
         }
     }
 
-    // ³¬¹ı×î´óÉî¶È£¬¹âÏßË¥¼õµ½ 0
+    // è¶…è¿‡æœ€å¤§æ·±åº¦ï¼Œå…‰çº¿è¡°å‡åˆ° 0
     return accumulated_color;
 }
 
-__global__ void
-render(int sample, camera **cam, hittable **world, int max_depth, int image_width, int image_height, color *image,
-       curandState *states) {
+__global__ void render(int sample, camera **cam, hittable **world,
+                       int max_depth, int image_width, int image_height,
+                       color *image, curandState *states) {
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
     int id = y * image_width + x;
 
-    if (x >= image_width) return;
-    if (y >= image_height) return;
+    if (x >= image_width)
+        return;
+    if (y >= image_height)
+        return;
 
     curandState *rng = &states[id];
 
     color res(0, 0, 0);
     color background(0.70, 0.8, 1.0);
     for (int s = 0; s < sample; ++s) {
-//        printf("sample: %d/%d\n", s, sample);
+        //        printf("sample: %d/%d\n", s, sample);
         auto u = float(x + random_float(rng)) / (image_width - 1);
         auto v = float(y + random_float(rng)) / (image_height - 1);
         ray r = (*cam)->get_ray(u, v, rng);
         res += ray_color(r, background, world, max_depth, rng);
     }
-    // UPDATE ½«³ıÒÔ²ÉÑùÊıµÄ²Ù×÷ÒÆ¶¯µ½ÁË kernel º¯ÊıÄÚ
-    // UPDATE »¹ÊÇ½«²Ù×÷±£ÁôÔÚ write_color º¯ÊıÀï°É
+    // UPDATE å°†é™¤ä»¥é‡‡æ ·æ•°çš„æ“ä½œç§»åŠ¨åˆ°äº† kernel å‡½æ•°å†…
+    // UPDATE è¿˜æ˜¯å°†æ“ä½œä¿ç•™åœ¨ write_color å‡½æ•°é‡Œå§
     image[id] = res;
 }
 
-// UPDATE ¸´ÖÆ PI µÄÈ«¾Ö±äÁ¿ºÍ inf µÄÈ«¾Ö±äÁ¿µ½Éè±¸ÄÚ´æ
+// UPDATE å¤åˆ¶ PI çš„å…¨å±€å˜é‡å’Œ inf çš„å…¨å±€å˜é‡åˆ°è®¾å¤‡å†…å­˜
 void init_constant() {
     constexpr float tmp_inf = std::numeric_limits<float>::infinity();
-//    constexpr float tmp_inf = 1e9;
+    //    constexpr float tmp_inf = 1e9;
     const float tmp_pi = acos(-1);
     when("inf: %f, pi: %f\n", tmp_inf, tmp_pi);
 
-    // UPDATE cudaMemcpyToSymbol ÖĞÉè±¸¶ËµÄ±äÁ¿ÊÇ²»ĞèÒª¼Ó & µÄ
-    // UPDATE Ê¹ÓÃ define ¶¨ÒåµÄ³£Á¿Ìæ´ú³£Êı³£Á¿
+    // UPDATE cudaMemcpyToSymbol ä¸­è®¾å¤‡ç«¯çš„å˜é‡æ˜¯ä¸éœ€è¦åŠ  & çš„
+    // UPDATE ä½¿ç”¨ define å®šä¹‰çš„å¸¸é‡æ›¿ä»£å¸¸æ•°å¸¸é‡
     // checkCudaErrors(cudaMemcpyToSymbol(inf, &tmp_inf, sizeof(float)));
     // checkCudaErrors(cudaMemcpyToSymbol(pi, &tmp_pi, sizeof(float)));
 }
 
 __global__ void init_random_library(curandState *state) {
     int idx = blockIdx.x;
-    // ¹Ì¶¨ÖÖ×Ó£¬·½±ã±È½ÏĞÔÄÜ
-    // UPDATE ¸üĞÂËæ»úÊıÉú³É·½·¨
+    // å›ºå®šç§å­ï¼Œæ–¹ä¾¿æ¯”è¾ƒæ€§èƒ½
+    // UPDATE æ›´æ–°éšæœºæ•°ç”Ÿæˆæ–¹æ³•
     curand_init(idx, 0, 0, &state[idx]);
 }
 
-// UPDATE ²¢ĞĞ»¯ÊÀ½çÉú³É
-__global__ void
-random_scene(hittable **list, hittable **world, camera **cam, int image_width, int image_height, curandState *states,
-             int num_of_objects) {
+// UPDATE å¹¶è¡ŒåŒ–ä¸–ç•Œç”Ÿæˆ
+__global__ void random_scene(hittable **list, hittable **world, camera **cam,
+                             int image_width, int image_height,
+                             curandState *states, int num_of_objects) {
 
-//     UPDATE Ìí¼ÓĞ¡ĞÍ³¡¾°½øĞĞ²âÊÔ
+    //     UPDATE æ·»åŠ å°å‹åœºæ™¯è¿›è¡Œæµ‹è¯•
     if (true) {
         list[0] = new sphere(vec3(0, 0, -1), 0.5,
                              new lambertian(vec3(0.1, 0.2, 0.5)));
@@ -110,10 +115,8 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
                              new lambertian(vec3(0.8, 0.8, 0.0)));
         list[2] = new sphere(vec3(1, 0, -1), 0.5,
                              new metal(vec3(0.8, 0.6, 0.2), 0.0));
-        list[3] = new sphere(vec3(-1, 0, -1), 0.5,
-                             new dielectric(1.5));
-        list[4] = new sphere(vec3(-1, 0, -1), -0.45,
-                             new dielectric(1.5));
+        list[3] = new sphere(vec3(-1, 0, -1), 0.5, new dielectric(1.5));
+        list[4] = new sphere(vec3(-1, 0, -1), -0.45, new dielectric(1.5));
         *world = new hittable_list(list, 5);
 
         // Camera
@@ -122,14 +125,12 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
         vec3 vup(0, 1, 0);
         auto dist_to_focus = (lookfrom - lookat).length();
         auto aperture = 0.1;
-//        *cam = new camera(lookfrom, lookat, vup, 20, float(image_width) / float(image_height), aperture, dist_to_focus);
+        //        *cam = new camera(lookfrom, lookat, vup, 20,
+        //        float(image_width) / float(image_height), aperture,
+        //        dist_to_focus);
 
-        *cam = new camera(vec3(-2, 2, 1),
-                          vec3(0, 0, -1),
-                          vec3(0, 1, 0),
-                          20.0,
-                          float(image_width) / float(image_height),
-                          0,
+        *cam = new camera(vec3(-2, 2, 1), vec3(0, 0, -1), vec3(0, 1, 0), 20.0,
+                          float(image_width) / float(image_height), 0,
                           dist_to_focus);
 
         return;
@@ -145,7 +146,7 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
 
     material *sphere_material;
 
-    // ÎªÁË±£Ö¤ÊıÁ¿¹Ì¶¨£¬ÇòÖ»ÒªÉú³ÉÁË¾Í»á¼ÓÈëµ½ÊÀ½ç
+    // ä¸ºäº†ä¿è¯æ•°é‡å›ºå®šï¼Œçƒåªè¦ç”Ÿæˆäº†å°±ä¼šåŠ å…¥åˆ°ä¸–ç•Œ
     if (choose_mat < 0.8f) {
         auto albedo = color::random(rng) * color::random(rng);
         sphere_material = new lambertian(albedo);
@@ -161,15 +162,21 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
     }
 
     if (id == 0) {
-//        list[num_of_objects - 4] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(vec3(0.5, 0.5, 0.5)));
-        list[num_of_objects - 4] = new sphere(vec3(0, -1000.0, 0), 1000, new lambertian(
-                new checker_texture(color(0.2, 0.3, 0.1), color(0.9, 0.9, 0.9))));
-        list[num_of_objects - 3] = new sphere(vec3(0, 2, 0), 1.0, new dielectric(1.5));
-        list[num_of_objects - 2] = new sphere(vec3(-4, 2, 0), 1.0, new lambertian(vec3(0.4, 0.2, 0.1)));
+        //        list[num_of_objects - 4] = new sphere(vec3(0, -1000.0, 0),
+        //        1000, new lambertian(vec3(0.5, 0.5, 0.5)));
+        list[num_of_objects - 4] =
+            new sphere(vec3(0, -1000.0, 0), 1000,
+                       new lambertian(new checker_texture(
+                           color(0.2, 0.3, 0.1), color(0.9, 0.9, 0.9))));
+        list[num_of_objects - 3] =
+            new sphere(vec3(0, 2, 0), 1.0, new dielectric(1.5));
+        list[num_of_objects - 2] = new sphere(
+            vec3(-4, 2, 0), 1.0, new lambertian(vec3(0.4, 0.2, 0.1)));
 
         auto difflight = new diffuse_light(color(4, 4, 4));
         auto rect_light = new xy_rect(3, 5, 1, 3, -2, difflight);
-//        list[num_of_objects - 1] = new sphere(vec3(4, 2, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));;
+        //        list[num_of_objects - 1] = new sphere(vec3(4, 2, 0), 1.0, new
+        //        metal(vec3(0.7, 0.6, 0.5), 0.0));;
         auto cylinder_light = new cylinder(0.5, 0, 2, difflight);
         list[num_of_objects - 1] = cylinder_light;
 
@@ -181,18 +188,14 @@ random_scene(hittable **list, hittable **world, camera **cam, int image_width, i
         vec3 vup(0, 1, 0);
         auto dist_to_focus = (lookfrom - lookat).length();
         auto aperture = 0.1;
-        *cam = new camera(
-                lookfrom,
-                lookat,
-                vup,
-                20,
-                float(image_width) / float(image_height),
-                aperture,
-                dist_to_focus);
+        *cam = new camera(lookfrom, lookat, vup, 20,
+                          float(image_width) / float(image_height), aperture,
+                          dist_to_focus);
     }
 }
 
-__global__ void free_scene(hittable **list, hittable **world, camera **cam, int num_of_objects) {
+__global__ void free_scene(hittable **list, hittable **world, camera **cam,
+                           int num_of_objects) {
     for (int i = 0; i < num_of_objects; i++) {
         delete list[i];
     }
@@ -200,9 +203,8 @@ __global__ void free_scene(hittable **list, hittable **world, camera **cam, int 
     delete *cam;
 }
 
-
 int main(int argc, char *argv[]) {
-    // cpu ¼ÆÊ±¹¦ÄÜ
+    // cpu è®¡æ—¶åŠŸèƒ½
     auto start = clock();
     when("Start counting time\n");
 
@@ -215,8 +217,8 @@ int main(int argc, char *argv[]) {
     const int num_of_objects = 22 * 22 + 1 + 3;
     // const int num_of_objects = 3;
 
-    // ¸ù¾İÃüÁîĞĞ²ÎÊıÉèÖÃÍ¼Ïñ²ÎÊı
-    // UPDATE É¾È¥µ÷ÕûÍ¼Ïñ³¤¿íµÄ²ÎÊı
+    // æ ¹æ®å‘½ä»¤è¡Œå‚æ•°è®¾ç½®å›¾åƒå‚æ•°
+    // UPDATE åˆ å»è°ƒæ•´å›¾åƒé•¿å®½çš„å‚æ•°
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "-d") == 0) {
             max_depth = atoi(argv[i + 1]);
@@ -229,59 +231,68 @@ int main(int argc, char *argv[]) {
     dim3 grids(image_width / wrap + 1, image_height / wrap + 1);
     dim3 threads(wrap, wrap);
 
-    // Ëæ»ú»¯¿âµÄ³õÊ¼»¯²Ù×÷
+    // éšæœºåŒ–åº“çš„åˆå§‹åŒ–æ“ä½œ
     curandStateXORWOW_t *states;
     constexpr int num_of_pixels = image_height * image_width;
-    checkCudaErrors(cudaMalloc(&states, sizeof(curandStateXORWOW_t) * num_of_pixels));
+    checkCudaErrors(
+        cudaMalloc(&states, sizeof(curandStateXORWOW_t) * num_of_pixels));
     when("Finish the memory allocation of random library\n");
 
-    // Ëæ»úÊıÉú³ÉÆ÷µÄ³õÊ¼»¯²Ù×÷
-    // UPDATE ½«Ëæ»úÊı³õÊ¼»¯´Ó 1xnum_of_pixels ¸ÄÎª num_of_pixelsx1£¬Ç°Õß»á³¬¹ıÏß³ÌÊıÏŞÖÆ
+    // éšæœºæ•°ç”Ÿæˆå™¨çš„åˆå§‹åŒ–æ“ä½œ
+    // UPDATE å°†éšæœºæ•°åˆå§‹åŒ–ä» 1xnum_of_pixels æ”¹ä¸º
+    // num_of_pixelsx1ï¼Œå‰è€…ä¼šè¶…è¿‡çº¿ç¨‹æ•°é™åˆ¶
     init_constant();
     init_random_library<<<num_of_pixels, 1>>>(states);
 
-    // Íê³ÉËæ»úÊı¿âºÍ³£ÊıµÄ³õÊ¼»¯
+    // å®Œæˆéšæœºæ•°åº“å’Œå¸¸æ•°çš„åˆå§‹åŒ–
     checkCudaErrors(cudaDeviceSynchronize());
     when("Finish the initialization of random library and constants\n");
 
-    // UPDATE hittable_list ĞèÒª´Ó vector Ç¨ÒÆµ½Êı×é£¬Ê¹ÓÃÖ¸Õë¿ª±Ù¿Õ¼ä£¬·½±ãÔÚÏÔ¿¨¼ä´«ÊäÊı¾İ
-    // UPDATE hittable_list ´ÓÊı×éÇ¨ÒÆµ½ thrust_vector£¬Êı×é²»·½±ã´¦Àí¼Ì³ĞÎÊÌâ
-    // UPDATE hittable_list »¹ÊÇÊ¹ÓÃÁËÖ¸ÕëÊµÏÖ£¬²¢ÇÒÔÚÏÔ¿¨ÉÏ´´½¨
-    // ÔÚ cuda µÄº¯ÊıÖĞ´´½¨ÊÀ½çºÍÏà»ú£¬ÒòÎªÒªÊ¹ÓÃ new ´´½¨£¬²»·½±ãÊ¹ÓÃ malloc Ö±½Ó´´½¨È»ºó¿½±´
+    // UPDATE hittable_list éœ€è¦ä» vector
+    // è¿ç§»åˆ°æ•°ç»„ï¼Œä½¿ç”¨æŒ‡é’ˆå¼€è¾Ÿç©ºé—´ï¼Œæ–¹ä¾¿åœ¨æ˜¾å¡é—´ä¼ è¾“æ•°æ® UPDATE hittable_list
+    // ä»æ•°ç»„è¿ç§»åˆ° thrust_vectorï¼Œæ•°ç»„ä¸æ–¹ä¾¿å¤„ç†ç»§æ‰¿é—®é¢˜ UPDATE hittable_list
+    // è¿˜æ˜¯ä½¿ç”¨äº†æŒ‡é’ˆå®ç°ï¼Œå¹¶ä¸”åœ¨æ˜¾å¡ä¸Šåˆ›å»º åœ¨ cuda
+    // çš„å‡½æ•°ä¸­åˆ›å»ºä¸–ç•Œå’Œç›¸æœºï¼Œå› ä¸ºè¦ä½¿ç”¨ new åˆ›å»ºï¼Œä¸æ–¹ä¾¿ä½¿ç”¨ malloc
+    // ç›´æ¥åˆ›å»ºç„¶åæ‹·è´
     hittable **dev_lists, **dev_world;
     camera **dev_camera;
-    checkCudaErrors(cudaMalloc((void **) &dev_lists, sizeof(hittable *) * num_of_objects));
-    checkCudaErrors(cudaMalloc((void **) &dev_world, sizeof(hittable *)));
-    checkCudaErrors(cudaMalloc((void **) &dev_camera, sizeof(camera *)));
+    checkCudaErrors(
+        cudaMalloc((void **)&dev_lists, sizeof(hittable *) * num_of_objects));
+    checkCudaErrors(cudaMalloc((void **)&dev_world, sizeof(hittable *)));
+    checkCudaErrors(cudaMalloc((void **)&dev_camera, sizeof(camera *)));
     when("Finish the allocation of objects, world, camera\n");
 
-    random_scene<<<num_of_objects, 1>>>(dev_lists, dev_world, dev_camera, image_width, image_height, states,
+    random_scene<<<num_of_objects, 1>>>(dev_lists, dev_world, dev_camera,
+                                        image_width, image_height, states,
                                         num_of_objects);
     when("Finish the creation of world, objects, camera\n");
 
-    // ·ÖÅä±¾µØºÍÏÔ¿¨Í¼ÏñµÄ¿Õ¼ä
+    // åˆ†é…æœ¬åœ°å’Œæ˜¾å¡å›¾åƒçš„ç©ºé—´
     static color image[num_of_pixels];
     color *dev_image;
-    checkCudaErrors(cudaMalloc((void **) &dev_image, sizeof(color) * num_of_pixels));
+    checkCudaErrors(
+        cudaMalloc((void **)&dev_image, sizeof(color) * num_of_pixels));
     when("Finish the allocation of image\n");
 
-    // Íê³ÉÊÀ½ç¡¢Ïà»ú¡¢Í¼ÏñÄÚ´æµÄ³õÊ¼»¯
+    // å®Œæˆä¸–ç•Œã€ç›¸æœºã€å›¾åƒå†…å­˜çš„åˆå§‹åŒ–
     checkCudaErrors(cudaDeviceSynchronize());
     when("Start rendering\n");
 
-    render<<<grids, threads>>>(samples_per_pixel, dev_camera, dev_world, max_depth, image_width, image_height,
-                               dev_image, states);
+    render<<<grids, threads>>>(samples_per_pixel, dev_camera, dev_world,
+                               max_depth, image_width, image_height, dev_image,
+                               states);
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     when("Finish rendering\n");
 
-    // Êä³ö
-    checkCudaErrors(cudaMemcpy(image, dev_image, sizeof(color) * num_of_pixels, cudaMemcpyDeviceToHost));
+    // è¾“å‡º
+    checkCudaErrors(cudaMemcpy(image, dev_image, sizeof(color) * num_of_pixels,
+                               cudaMemcpyDeviceToHost));
     checkCudaErrors(cudaDeviceSynchronize());
     when("Copying image\n");
 
-    // ÖØ¶¨ÏòÊä³öµ½ main.ppm
-    (void) freopen("main.ppm", "w", stdout);
+    // é‡å®šå‘è¾“å‡ºåˆ° main.ppm
+    (void)freopen("main.ppm", "w", stdout);
     printf("P3\n%d %d\n255\n", image_width, image_height);
 
     for (int j = image_height - 1; j >= 0; --j) {
@@ -291,13 +302,16 @@ int main(int argc, char *argv[]) {
     }
 
     FILE *fp = fopen("gpu-cuda-version-time.log", "a");
-    fprintf(fp,
-            "basic cuda versions, improve world generate, image width: %d,image height: %d, max depth: %d, samples per pixel: %d, time: %f s\n",
-            image_width, image_height, max_depth, samples_per_pixel, (clock() - start) / float(CLOCKS_PER_SEC));
+    fprintf(
+        fp,
+        "basic cuda versions, improve world generate, image width: %d,image "
+        "height: %d, max depth: %d, samples per pixel: %d, time: %f s\n",
+        image_width, image_height, max_depth, samples_per_pixel,
+        (clock() - start) / float(CLOCKS_PER_SEC));
     fclose(fp);
 
-    // ÇåÀíÍË³ö³ÌĞò
-    // UPDATE ÈÃ²Ù×÷ÏµÍ³È¥ free °Ñ£¬free ²»¶¯ÁË
+    // æ¸…ç†é€€å‡ºç¨‹åº
+    // UPDATE è®©æ“ä½œç³»ç»Ÿå» free æŠŠï¼Œfree ä¸åŠ¨äº†
     // free_scene<<<1, 1>>>(dev_lists, dev_world, dev_camera, num_of_objects);
     checkCudaErrors(cudaFree(dev_lists));
     checkCudaErrors(cudaFree(dev_world));

@@ -113,21 +113,26 @@ struct scene {
 camera **parser_camera(json &data) {
     camera **host_cam = new camera *[1];
     auto camdata = data["camera"];
-    auto lookfrom = point3(camdata["lookfrom"][0], camdata["lookfrom"][1], camdata["lookfrom"][2]);
-    auto lookat = point3(camdata["lookat"][0], camdata["lookat"][1], camdata["lookat"][2]);
+    auto lookfrom = point3(camdata["lookfrom"][0], camdata["lookfrom"][1],
+                           camdata["lookfrom"][2]);
+    auto lookat = point3(camdata["lookat"][0], camdata["lookat"][1],
+                         camdata["lookat"][2]);
     auto vup = vec3(camdata["vup"][0], camdata["vup"][1], camdata["vup"][2]);
     auto vfov = camdata["vfov"];
     auto aspect_ratio = float(data["width"]) / float(data["height"]);
     auto aperture = camdata["aperture"];
     auto focus_dist = (lookfrom - lookat).length();
-    host_cam[0] = new camera(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, focus_dist);
+    host_cam[0] = new camera(lookfrom, lookat, vup, vfov, aspect_ratio,
+                             aperture, focus_dist);
 
     camera **dev_copy, **dev_cam;
     dev_copy = new camera *[1];
-    checkCudaErrors(cudaMalloc((void **) &dev_copy[0], sizeof(camera)));
-    checkCudaErrors(cudaMemcpy(dev_copy[0], host_cam[0], sizeof(camera), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMalloc((void **) &dev_cam, sizeof(camera *)));
-    checkCudaErrors(cudaMemcpy(dev_cam, &dev_copy, sizeof(camera *), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMalloc((void **)&dev_copy[0], sizeof(camera)));
+    checkCudaErrors(cudaMemcpy(dev_copy[0], host_cam[0], sizeof(camera),
+                               cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMalloc((void **)&dev_cam, sizeof(camera *)));
+    checkCudaErrors(cudaMemcpy(dev_cam, &dev_copy, sizeof(camera *),
+                               cudaMemcpyHostToDevice));
 
     data["camera"]["host_ptr"] = reinterpret_cast<uintptr_t>(host_cam);
     data["camera"]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_cam);
@@ -136,7 +141,8 @@ camera **parser_camera(json &data) {
 }
 
 mytexture **parser_texture(json &data) {
-    mytexture **host_textures = new mytexture *[data["num_of_textures"]];
+    mytexture **host_textures =
+        new mytexture *[data["num_of_textures"].get<int>()];
     for (int i = 0; i < data["num_of_textures"]; ++i) {
         auto texdata = data["texture"][i];
         if (texdata["type"] == "solid_color") {
@@ -144,23 +150,33 @@ mytexture **parser_texture(json &data) {
                                 texdata["color"][1].get<double>(),
                                 texdata["color"][2].get<double>());
             host_textures[i] = new solid_color(albedo);
-            data["texture"][i]["host_ptr"] = reinterpret_cast<uintptr_t>(host_textures[i]);
+            data["texture"][i]["host_ptr"] =
+                reinterpret_cast<uintptr_t>(host_textures[i]);
 
             mytexture *dev_texture;
-            checkCudaErrors(cudaMalloc((void **) &dev_texture, sizeof(solid_color)));
-            checkCudaErrors(cudaMemcpy(dev_texture, host_textures[i], sizeof(solid_color), cudaMemcpyHostToDevice));
-            data["texture"][i]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_texture);
+            checkCudaErrors(
+                cudaMalloc((void **)&dev_texture, sizeof(solid_color)));
+            checkCudaErrors(cudaMemcpy(dev_texture, host_textures[i],
+                                       sizeof(solid_color),
+                                       cudaMemcpyHostToDevice));
+            data["texture"][i]["device_ptr"] =
+                reinterpret_cast<uintptr_t>(dev_texture);
         }
     }
 
     mytexture **dev_copy, **dev_textures;
-    dev_copy = new mytexture *[data["num_of_textures"]];
+    dev_copy = new mytexture *[data["num_of_textures"].get<int>()];
     for (int i = 0; i < data["num_of_textures"].get<int>(); ++i) {
-        dev_copy[i] = reinterpret_cast<mytexture *>(data["texture"][i]["device_ptr"].get<uintptr_t>());
+        dev_copy[i] = reinterpret_cast<mytexture *>(
+            data["texture"][i]["device_ptr"].get<uintptr_t>());
     }
-    checkCudaErrors(cudaMalloc((void **) &dev_textures, sizeof(mytexture *) * data["num_of_textures"].get<int>()));
-    checkCudaErrors(cudaMemcpy(dev_textures, dev_copy, sizeof(mytexture *) * data["num_of_textures"].get<int>(),
-                               cudaMemcpyHostToDevice));
+    checkCudaErrors(
+        cudaMalloc((void **)&dev_textures,
+                   sizeof(mytexture *) * data["num_of_textures"].get<int>()));
+    checkCudaErrors(
+        cudaMemcpy(dev_textures, dev_copy,
+                   sizeof(mytexture *) * data["num_of_textures"].get<int>(),
+                   cudaMemcpyHostToDevice));
 
     data["textures"]["host_ptr"] = reinterpret_cast<uintptr_t>(host_textures);
     data["textures"]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_textures);
@@ -168,21 +184,27 @@ mytexture **parser_texture(json &data) {
 }
 
 material **parser_material(json &data) {
-    material **host_materials = new material *[data["num_of_materials"]];
+    material **host_materials =
+        new material *[data["num_of_materials"].get<int>()];
     for (int i = 0; i < data["num_of_materials"]; ++i) {
         auto matdata = data["material"][i];
         if (matdata["type"] == "lambertian") {
             auto texture_id = matdata["texture"].get<int>();
-            host_materials[i] = new lambertian(
-                    reinterpret_cast<mytexture *>(data["textures"][texture_id]["host_ptr"].get<uintptr_t>()));
-            data["material"][i]["host_ptr"] = reinterpret_cast<uintptr_t>(host_materials[i]);
+            host_materials[i] = new lambertian(reinterpret_cast<mytexture *>(
+                data["textures"][texture_id]["host_ptr"].get<uintptr_t>()));
+            data["material"][i]["host_ptr"] =
+                reinterpret_cast<uintptr_t>(host_materials[i]);
 
             material *dev_copy, *dev_material;
-            dev_copy = new lambertian(
-                    reinterpret_cast<mytexture *>(data["textures"][texture_id]["device_ptr"].get<uintptr_t>()));
-            checkCudaErrors(cudaMalloc((void **) &dev_material, sizeof(lambertian)));
-            checkCudaErrors(cudaMemcpy(dev_material, dev_copy, sizeof(lambertian), cudaMemcpyHostToDevice));
-            data["material"][i]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_material);
+            dev_copy = new lambertian(reinterpret_cast<mytexture *>(
+                data["textures"][texture_id]["device_ptr"].get<uintptr_t>()));
+            checkCudaErrors(
+                cudaMalloc((void **)&dev_material, sizeof(lambertian)));
+            checkCudaErrors(cudaMemcpy(dev_material, dev_copy,
+                                       sizeof(lambertian),
+                                       cudaMemcpyHostToDevice));
+            data["material"][i]["device_ptr"] =
+                reinterpret_cast<uintptr_t>(dev_material);
         }
         if (matdata["type"] == "metal") {
             color albedo = color(matdata["albedo"][0].get<double>(),
@@ -190,41 +212,55 @@ material **parser_material(json &data) {
                                  matdata["albedo"][2].get<double>());
             auto fuzz = matdata["fuzz"].get<double>();
             host_materials[i] = new metal(albedo, fuzz);
-            data["material"][i]["host_ptr"] = reinterpret_cast<uintptr_t>(host_materials[i]);
+            data["material"][i]["host_ptr"] =
+                reinterpret_cast<uintptr_t>(host_materials[i]);
 
             material *dev_material;
-            checkCudaErrors(cudaMalloc((void **) &dev_material, sizeof(metal)));
-            checkCudaErrors(cudaMemcpy(dev_material, host_materials[i], sizeof(metal), cudaMemcpyHostToDevice));
-            data["material"][i]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_material);
+            checkCudaErrors(cudaMalloc((void **)&dev_material, sizeof(metal)));
+            checkCudaErrors(cudaMemcpy(dev_material, host_materials[i],
+                                       sizeof(metal), cudaMemcpyHostToDevice));
+            data["material"][i]["device_ptr"] =
+                reinterpret_cast<uintptr_t>(dev_material);
         }
         if (matdata["type"] == "dielectric") {
             auto ir = matdata["index_of_refraction"].get<double>();
             host_materials[i] = new dielectric(ir);
-            data["material"][i]["host_ptr"] = reinterpret_cast<uintptr_t>(host_materials[i]);
+            data["material"][i]["host_ptr"] =
+                reinterpret_cast<uintptr_t>(host_materials[i]);
 
             material *dev_material;
-            checkCudaErrors(cudaMalloc((void **) &dev_material, sizeof(dielectric)));
-            checkCudaErrors(cudaMemcpy(dev_material, host_materials[i], sizeof(dielectric), cudaMemcpyHostToDevice));
-            data["material"][i]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_material);
+            checkCudaErrors(
+                cudaMalloc((void **)&dev_material, sizeof(dielectric)));
+            checkCudaErrors(cudaMemcpy(dev_material, host_materials[i],
+                                       sizeof(dielectric),
+                                       cudaMemcpyHostToDevice));
+            data["material"][i]["device_ptr"] =
+                reinterpret_cast<uintptr_t>(dev_material);
         }
     }
 
     material **dev_copy, **dev_materials;
-    dev_copy = new material *[data["num_of_materials"]];
+    dev_copy = new material *[data["num_of_materials"].get<int>()];
     for (int i = 0; i < data["num_of_materials"].get<int>(); ++i) {
-        dev_copy[i] = reinterpret_cast<material *>(data["material"][i]["device_ptr"].get<uintptr_t>());
+        dev_copy[i] = reinterpret_cast<material *>(
+            data["material"][i]["device_ptr"].get<uintptr_t>());
     }
-    checkCudaErrors(cudaMalloc((void **) &dev_materials, sizeof(material *) * data["num_of_materials"].get<int>()));
-    checkCudaErrors(cudaMemcpy(dev_materials, dev_copy, sizeof(material *) * data["num_of_materials"].get<int>(),
-                               cudaMemcpyHostToDevice));
+    checkCudaErrors(
+        cudaMalloc((void **)&dev_materials,
+                   sizeof(material *) * data["num_of_materials"].get<int>()));
+    checkCudaErrors(
+        cudaMemcpy(dev_materials, dev_copy,
+                   sizeof(material *) * data["num_of_materials"].get<int>(),
+                   cudaMemcpyHostToDevice));
 
     data["materials"]["host_ptr"] = reinterpret_cast<uintptr_t>(host_materials);
-    data["materials"]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_materials);
+    data["materials"]["device_ptr"] =
+        reinterpret_cast<uintptr_t>(dev_materials);
     return host_materials;
 }
 
 hittable **parser_object(json &data) {
-    hittable **host_objects = new hittable *[data["num_of_objects"]];
+    hittable **host_objects = new hittable *[data["num_of_objects"].get<int>()];
     for (int i = 0; i < data["num_of_objects"]; ++i) {
         auto objdata = data["object"][i];
         if (objdata["type"] == "sphere") {
@@ -233,27 +269,41 @@ hittable **parser_object(json &data) {
                                  objdata["center"][2].get<double>());
             auto radius = objdata["radius"].get<double>();
             auto material_id = objdata["material"].get<int>();
-            host_objects[i] = new sphere(center, radius,
-                                         reinterpret_cast<material *>(data["materials"][material_id]["host_ptr"].get<uintptr_t>()));
-            data["object"][i]["host_ptr"] = reinterpret_cast<uintptr_t>(host_objects[i]);
+            host_objects[i] =
+                new sphere(center, radius,
+                           reinterpret_cast<material *>(
+                               data["materials"][material_id]["host_ptr"]
+                                   .get<uintptr_t>()));
+            data["object"][i]["host_ptr"] =
+                reinterpret_cast<uintptr_t>(host_objects[i]);
 
             hittable *dev_copy, *dev_object;
-            dev_copy = new sphere(center, radius,
-                                  reinterpret_cast<material *>(data["materials"][material_id]["device_ptr"].get<uintptr_t>()));
-            checkCudaErrors(cudaMalloc((void **) &dev_object, sizeof(sphere)));
-            checkCudaErrors(cudaMemcpy(dev_object, dev_copy, sizeof(sphere), cudaMemcpyHostToDevice));
-            data["object"][i]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_object);
+            dev_copy =
+                new sphere(center, radius,
+                           reinterpret_cast<material *>(
+                               data["materials"][material_id]["device_ptr"]
+                                   .get<uintptr_t>()));
+            checkCudaErrors(cudaMalloc((void **)&dev_object, sizeof(sphere)));
+            checkCudaErrors(cudaMemcpy(dev_object, dev_copy, sizeof(sphere),
+                                       cudaMemcpyHostToDevice));
+            data["object"][i]["device_ptr"] =
+                reinterpret_cast<uintptr_t>(dev_object);
         }
     }
 
     hittable **dev_copy, **dev_objects;
-    dev_copy = new hittable *[data["num_of_objects"]];
+    dev_copy = new hittable *[data["num_of_objects"].get<int>()];
     for (int i = 0; i < data["num_of_objects"].get<int>(); ++i) {
-        dev_copy[i] = reinterpret_cast<hittable *>(data["object"][i]["device_ptr"].get<uintptr_t>());
+        dev_copy[i] = reinterpret_cast<hittable *>(
+            data["object"][i]["device_ptr"].get<uintptr_t>());
     }
-    checkCudaErrors(cudaMalloc((void **) &dev_objects, sizeof(hittable *) * data["num_of_objects"].get<int>()));
-    checkCudaErrors(cudaMemcpy(dev_objects, dev_copy, sizeof(hittable *) * data["num_of_objects"].get<int>(),
-                               cudaMemcpyHostToDevice));
+    checkCudaErrors(
+        cudaMalloc((void **)&dev_objects,
+                   sizeof(hittable *) * data["num_of_objects"].get<int>()));
+    checkCudaErrors(
+        cudaMemcpy(dev_objects, dev_copy,
+                   sizeof(hittable *) * data["num_of_objects"].get<int>(),
+                   cudaMemcpyHostToDevice));
 
     data["objects"]["host_ptr"] = reinterpret_cast<uintptr_t>(host_objects);
     data["objects"]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_objects);
@@ -262,18 +312,23 @@ hittable **parser_object(json &data) {
 
 hittable_list **parser_world(json &data) {
     hittable_list **host_world = new hittable_list *[1];
-    host_world[0] = new hittable_list(reinterpret_cast<hittable **>(data["objects"]["host_ptr"].get<uintptr_t>()),
-                                      data["num_of_objects"].get<int>());
+    host_world[0] =
+        new hittable_list(reinterpret_cast<hittable **>(
+                              data["objects"]["host_ptr"].get<uintptr_t>()),
+                          data["num_of_objects"].get<int>());
     data["world"]["host_ptr"] = reinterpret_cast<uintptr_t>(host_world);
 
-    hittable_list **dev_copy, **dev_world, dev_hittable_list(
-            reinterpret_cast<hittable **>(data["objects"]["device_ptr"].get<uintptr_t>()),
-            data["num_of_objects"].get<int>());
+    hittable_list **dev_copy, **dev_world,
+        dev_hittable_list(reinterpret_cast<hittable **>(
+                              data["objects"]["device_ptr"].get<uintptr_t>()),
+                          data["num_of_objects"].get<int>());
     dev_copy = new hittable_list *[1];
-    checkCudaErrors(cudaMalloc((void **) dev_copy[0], sizeof(hittable_list)));
-    checkCudaErrors(cudaMemcpy(dev_copy[0], &dev_hittable_list, sizeof(hittable_list), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMalloc((void **) &dev_world, sizeof(hittable_list *)));
-    checkCudaErrors(cudaMemcpy(dev_world, dev_copy, sizeof(hittable_list *), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMalloc((void **)dev_copy[0], sizeof(hittable_list)));
+    checkCudaErrors(cudaMemcpy(dev_copy[0], &dev_hittable_list,
+                               sizeof(hittable_list), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMalloc((void **)&dev_world, sizeof(hittable_list *)));
+    checkCudaErrors(cudaMemcpy(dev_world, dev_copy, sizeof(hittable_list *),
+                               cudaMemcpyHostToDevice));
     data["world"]["device_ptr"] = reinterpret_cast<uintptr_t>(dev_world);
     return host_world;
 }
@@ -284,7 +339,8 @@ scene *parse_scene(const std::string &filename) {
 
     auto *host_scene = new scene();
 
-    host_scene->background = color(data["background"][0], data["background"][1], data["background"][2]);
+    host_scene->background = color(data["background"][0], data["background"][1],
+                                   data["background"][2]);
     host_scene->max_depth = data["max_depth"];
     host_scene->samples_per_pixel = data["samples_per_pixel"];
     host_scene->width = data["width"];
@@ -320,13 +376,19 @@ scene *parse_scene(const std::string &filename) {
     scene *dev_copy, *dev_scene;
     dev_copy = new scene();
     memcpy(dev_copy, host_scene, sizeof(scene));
-    dev_copy->cam = reinterpret_cast<camera **>(data["camera"]["device_ptr"].get<uintptr_t>());
-    dev_copy->textures = reinterpret_cast<mytexture **>(data["texture"]["device_ptr"].get<uintptr_t>());
-    dev_copy->materials = reinterpret_cast<material **>(data["material"]["device_ptr"].get<uintptr_t>());
-    dev_copy->objects = reinterpret_cast<hittable **>(data["object"]["device_ptr"].get<uintptr_t>());
-    dev_copy->world = reinterpret_cast<hittable_list **>(data["world"]["device_ptr"].get<uintptr_t>());
-    checkCudaErrors(cudaMalloc((void **) &dev_scene, sizeof(scene)));
-    checkCudaErrors(cudaMemcpy(dev_scene, dev_copy, sizeof(scene), cudaMemcpyHostToDevice));
+    dev_copy->cam = reinterpret_cast<camera **>(
+        data["camera"]["device_ptr"].get<uintptr_t>());
+    dev_copy->textures = reinterpret_cast<mytexture **>(
+        data["texture"]["device_ptr"].get<uintptr_t>());
+    dev_copy->materials = reinterpret_cast<material **>(
+        data["material"]["device_ptr"].get<uintptr_t>());
+    dev_copy->objects = reinterpret_cast<hittable **>(
+        data["object"]["device_ptr"].get<uintptr_t>());
+    dev_copy->world = reinterpret_cast<hittable_list **>(
+        data["world"]["device_ptr"].get<uintptr_t>());
+    checkCudaErrors(cudaMalloc((void **)&dev_scene, sizeof(scene)));
+    checkCudaErrors(
+        cudaMemcpy(dev_scene, dev_copy, sizeof(scene), cudaMemcpyHostToDevice));
 
     data["host_ptr"] = reinterpret_cast<uintptr_t>(host_scene);
     data["device_ptr"] = reinterpret_cast<uintptr_t>(dev_scene);
