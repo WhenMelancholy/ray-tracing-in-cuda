@@ -45,6 +45,7 @@ public:
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
+        printf("Hit sphere\n");
         vec3 oc = r.origin() - center;
         auto a = r.direction().length_squared();
         auto hb = dot(oc, r.direction());

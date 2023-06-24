@@ -4,9 +4,11 @@
 #include "ray.cuh"
 #include <cuda.h>
 
-class camera {
+class camera : public Managed {
 public:
-    __device__ __host__ camera(
+    camera() {}
+
+    camera(
             point3 lookfrom,
             point3 lookat,
             vec3 vup,

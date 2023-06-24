@@ -53,6 +53,7 @@ class Managed {
 public:
     void *operator new(size_t len) {
         void *ptr;
+//        printf("Allocating %zu bytes on the managed memory heap\n", len);
         checkCudaErrors(cudaMallocManaged(&ptr, len));
         checkCudaErrors(cudaDeviceSynchronize());
         return ptr;

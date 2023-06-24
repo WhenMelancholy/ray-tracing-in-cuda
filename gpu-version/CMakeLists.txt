@@ -20,6 +20,9 @@ set(COMMON_HEADERS
         parser.hpp
         )
 
+add_compile_options("$<$<CONFIG:DEBUG>:-g;-G>")
+#add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>")
+
 add_executable(parallel_compute main.cu ${COMMON_HEADERS})
 add_executable(parser parser.cu ${COMMON_HEADERS})
 
