@@ -69,9 +69,9 @@ __device__ color ray_color(const ray &r, const color &background,
     return accumulated_color;
 }
 
-__global__ void render(int sample, camera **cam, hittable **world,
-                       int max_depth, int image_width, int image_height,
-                       color *image, curandState *states) {
+__global__ void render(int sample, color background, camera **cam,
+                       hittable **world, int max_depth, int image_width,
+                       int image_height, color *image, curandState *states) {
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
     int id = y * image_width + x;
@@ -84,7 +84,6 @@ __global__ void render(int sample, camera **cam, hittable **world,
     curandState *rng = &states[id];
 
     color res(0, 0, 0);
-    color background(0.70, 0.8, 1.0);
 
     // print detail info of cam
     // printf("%d\n", __LINE__);
@@ -312,9 +311,9 @@ int oldmain(int argc, char *argv[]) {
     checkCudaErrors(cudaDeviceSynchronize());
     when("Start rendering\n");
 
-    render<<<grids, threads>>>(samples_per_pixel, dev_camera, dev_world,
-                               max_depth, image_width, image_height, dev_image,
-                               states);
+    render<<<grids, threads>>>(samples_per_pixel, color(0.3, 0.7, 1.0),
+                               dev_camera, dev_world, max_depth, image_width,
+                               image_height, dev_image, states);
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     when("Finish rendering\n");
@@ -467,9 +466,9 @@ int jsonmain(int argc, char *argv[]) {
     checkCudaErrors(cudaDeviceSynchronize());
     when("Start rendering\n");
 
-    render<<<grids, threads>>>(world->samples_per_pixel, dev_camera, dev_world,
-                               world->max_depth, world->width, world->height,
-                               image, states);
+    render<<<grids, threads>>>(world->samples_per_pixel, world->background,
+                               dev_camera, dev_world, world->max_depth,
+                               world->width, world->height, image, states);
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     when("Finish rendering\n");
