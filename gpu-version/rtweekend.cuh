@@ -48,3 +48,18 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
         exit(99);
     }
 }
+
+class Managed {
+public:
+    void *operator new(size_t len) {
+        void *ptr;
+        checkCudaErrors(cudaMallocManaged(&ptr, len));
+        checkCudaErrors(cudaDeviceSynchronize());
+        return ptr;
+    }
+
+    void operator delete(void *ptr) {
+        checkCudaErrors(cudaDeviceSynchronize());
+        checkCudaErrors(cudaFree(ptr));
+    }
+};
