@@ -12,9 +12,9 @@ public:
     int len;
     hittable **objects;
 
-    __device__ __host__ hittable_list() {}
+    __device__ __host__ hittable_list() : hittable(class_type::hittable_list) {}
 
-    __device__ __host__ hittable_list(hittable **o, int l) {
+    __device__ __host__ hittable_list(hittable **o, int l) : hittable_list() {
         objects = o;
         len = l;
     }
@@ -38,10 +38,10 @@ public:
 
 class sphere : public hittable {
 public:
-    __device__ __host__ sphere() {}
+    __device__ __host__ sphere() : hittable(class_type::sphere) {}
 
     __device__ __host__ sphere(point3 cen, float r, material *m)
-        : center(cen), radius(r), mat_ptr(m) {}
+        : center(cen), radius(r), mat_ptr(m), hittable(class_type::sphere) {}
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
@@ -94,11 +94,12 @@ private:
 
 class xy_rect : public hittable {
 public:
-    __device__ __host__ xy_rect() {}
+    __device__ __host__ xy_rect() : hittable(class_type::xy_rect) {}
 
     __device__ __host__ xy_rect(float _x0, float _x1, float _y0, float _y1,
                                 float _k, material *mat)
-        : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat){};
+        : hittable(class_type::xy_rect), x0(_x0), x1(_x1), y0(_y0), y1(_y1),
+          k(_k), mp(mat){};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
@@ -130,11 +131,12 @@ public:
 
 class xz_rect : public hittable {
 public:
-    __device__ __host__ xz_rect(){};
+    __device__ __host__ xz_rect() : hittable(class_type::xz_rect){};
 
     __device__ __host__ xz_rect(float _x0, float _x1, float _z0, float _z1,
                                 float _k, material *mat)
-        : x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat){};
+        : hittable(class_type::xz_rect), x0(_x0), x1(_x1), z0(_z0), z1(_z1),
+          k(_k), mp(mat){};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
@@ -162,11 +164,12 @@ public:
 
 class yz_rect : public hittable {
 public:
-    __device__ __host__ yz_rect(){};
+    __device__ __host__ yz_rect() : hittable(class_type::yz_rect){};
 
     __device__ __host__ yz_rect(float _y0, float _y1, float _z0, float _z1,
                                 float _k, material *mat)
-        : y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat){};
+        : hittable(class_type::yz_rect), y0(_y0), y1(_y1), z0(_z0), z1(_z1),
+          k(_k), mp(mat){};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
@@ -216,11 +219,12 @@ __device__ __host__ bool quadratic(float a, float b, float c, float &t0,
 
 class cylinder : public hittable {
 public:
-    __device__ __host__ cylinder(){};
+    __device__ __host__ cylinder() : hittable(class_type::cylinder){};
 
     __device__ __host__ cylinder(float _radius, float _zmin, float _zmax,
                                  material *mat)
-        : radius(_radius), zmin(_zmin), zmax(_zmax), mat_ptr(mat){};
+        : hittable(class_type::cylinder), radius(_radius), zmin(_zmin),
+          zmax(_zmax), mat_ptr(mat){};
 
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {

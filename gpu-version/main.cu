@@ -27,6 +27,21 @@ __device__ color ray_color(const ray &r, const color &background,
     while (depth > 0) {
         hit_record rec;
 
+        // hittable_list *list = (hittable_list *)(*world);
+        // if (list != nullptr) {
+        //     printf("successful cast to hittable_list\n");
+        //     printf("list size: %d\n", list->len);
+        //     sphere *s = (sphere *)list->objects[0];
+        //     printf("sphere center: %f %f %f\n", s->center.x(), s->center.y(),
+        //            s->center.z());
+        //     lambertian *lam = (lambertian *)s->mat_ptr;
+        //     solid_color *sc = (solid_color *)lam->albedo;
+        //     printf("lambertian albedo: %f %f %f\n", sc->color_value.x(),
+        //            sc->color_value.y(), sc->color_value.z());
+        // } else {
+        //     printf("failed cast to hittable_list\n");
+        // }
+
         if ((*world)->hit(now, 0.001, FLT_MAX, rec)) {
             ray scattered;
             color attenuation;
@@ -70,6 +85,14 @@ __global__ void render(int sample, camera **cam, hittable **world,
 
     color res(0, 0, 0);
     color background(0.70, 0.8, 1.0);
+
+    // print detail info of cam
+    // printf("%d\n", __LINE__);
+    // auto cam_data = **cam;
+    // printf("%d\n", __LINE__);
+    // printf("cam: %f %f %f\n", cam_data.origin.x(), cam_data.origin.y(),
+    //        cam_data.origin.z());
+
     for (int s = 0; s < sample; ++s) {
         //        printf("sample: %d/%d\n", s, sample);
         auto u = float(x + random_float(rng)) / (image_width - 1);
@@ -203,29 +226,55 @@ __global__ void free_scene(hittable **list, hittable **world, camera **cam,
     delete *cam;
 }
 
-int main(int argc, char *argv[]) {
+std::tuple<hittable **, camera **> get_coded_scene(int image_width,
+                                                   int image_height,
+                                                   int num_of_objects,
+                                                   curandState *states) {
+    // UPDATE hittable_list 需要从 vector
+    // 迁移到数组，使用指针开辟空间，方便在显卡间传输数据 UPDATE hittable_list
+    // 从数组迁移到 thrust_vector，数组不方便处理继承问题 UPDATE hittable_list
+    // 还是使用了指针实现，并且在显卡上创建 在 cuda
+    // 的函数中创建世界和相机，因为要使用 new 创建，不方便使用 malloc
+    // 直接创建然后拷贝
+    hittable **dev_lists, **dev_world;
+    camera **dev_camera;
+
+    checkCudaErrors(
+        cudaMalloc((void **)&dev_lists, sizeof(hittable *) * num_of_objects));
+    checkCudaErrors(cudaMalloc((void **)&dev_world, sizeof(hittable *)));
+    checkCudaErrors(cudaMalloc((void **)&dev_camera, sizeof(camera *)));
+    when("Finish the allocation of objects, world, camera\n");
+
+    random_scene<<<num_of_objects, 1>>>(dev_lists, dev_world, dev_camera,
+                                        image_width, image_height, states,
+                                        num_of_objects);
+    when("Finish the creation of world, objects, camera\n");
+
+    return {dev_world, dev_camera};
+}
+int oldmain(int argc, char *argv[]) {
     // cpu 计时功能
     auto start = clock();
     when("Start counting time\n");
 
     // Init image
     constexpr auto aspect_ratio = 16.0 / 9.0;
-    constexpr int image_width = 1600;
+    constexpr int image_width = 800;
     constexpr int image_height = static_cast<int>(image_width / aspect_ratio);
-    int max_depth = 50;
     int samples_per_pixel = 500;
-    const int num_of_objects = 22 * 22 + 1 + 3;
-    // const int num_of_objects = 3;
+    const int num_of_objects = 5;
+
+    int max_depth = 50;
 
     // 根据命令行参数设置图像参数
     // UPDATE 删去调整图像长宽的参数
-    for (int i = 0; i < argc; i++) {
-        if (strcmp(argv[i], "-d") == 0) {
-            max_depth = atoi(argv[i + 1]);
-        } else if (strcmp(argv[i], "-spp") == 0) {
-            samples_per_pixel = atoi(argv[i + 1]);
-        }
-    }
+    // for (int i = 0; i < argc; i++) {
+    //     if (strcmp(argv[i], "-d") == 0) {
+    //         max_depth = atoi(argv[i + 1]);
+    //     } else if (strcmp(argv[i], "-spp") == 0) {
+    //         samples_per_pixel = atoi(argv[i + 1]);
+    //     }
+    // }
 
     const int wrap = 8;
     dim3 grids(image_width / wrap + 1, image_height / wrap + 1);
@@ -248,24 +297,9 @@ int main(int argc, char *argv[]) {
     checkCudaErrors(cudaDeviceSynchronize());
     when("Finish the initialization of random library and constants\n");
 
-    // UPDATE hittable_list 需要从 vector
-    // 迁移到数组，使用指针开辟空间，方便在显卡间传输数据 UPDATE hittable_list
-    // 从数组迁移到 thrust_vector，数组不方便处理继承问题 UPDATE hittable_list
-    // 还是使用了指针实现，并且在显卡上创建 在 cuda
-    // 的函数中创建世界和相机，因为要使用 new 创建，不方便使用 malloc
-    // 直接创建然后拷贝
-    hittable **dev_lists, **dev_world;
-    camera **dev_camera;
-    checkCudaErrors(
-        cudaMalloc((void **)&dev_lists, sizeof(hittable *) * num_of_objects));
-    checkCudaErrors(cudaMalloc((void **)&dev_world, sizeof(hittable *)));
-    checkCudaErrors(cudaMalloc((void **)&dev_camera, sizeof(camera *)));
-    when("Finish the allocation of objects, world, camera\n");
-
-    random_scene<<<num_of_objects, 1>>>(dev_lists, dev_world, dev_camera,
-                                        image_width, image_height, states,
-                                        num_of_objects);
-    when("Finish the creation of world, objects, camera\n");
+    // UPDATE 将世界和相机的创建放到函数中
+    auto [dev_world, dev_camera] =
+        get_coded_scene(image_width, image_height, num_of_objects, states);
 
     // 分配本地和显卡图像的空间
     static color image[num_of_pixels];
@@ -313,10 +347,141 @@ int main(int argc, char *argv[]) {
     // 清理退出程序
     // UPDATE 让操作系统去 free 把，free 不动了
     // free_scene<<<1, 1>>>(dev_lists, dev_world, dev_camera, num_of_objects);
-    checkCudaErrors(cudaFree(dev_lists));
-    checkCudaErrors(cudaFree(dev_world));
-    checkCudaErrors(cudaFree(dev_camera));
-    checkCudaErrors(cudaFree(dev_image));
-    checkCudaErrors(cudaFree(states));
+    // checkCudaErrors(cudaFree(dev_lists));
+    // checkCudaErrors(cudaFree(dev_world));
+    // checkCudaErrors(cudaFree(dev_camera));
+    // checkCudaErrors(cudaFree(dev_image));
+    // checkCudaErrors(cudaFree(states));
     cudaDeviceReset();
+    return 0;
+}
+
+void output_image(color *image, int image_width, int image_height,
+                  int samples_per_pixel, std::string filename) {
+    // 重定向输出到 main.ppm
+    FILE *fp = fopen(filename.c_str(), "w");
+    fprintf(fp, "P3\n%d %d\n255\n", image_width, image_height);
+
+    for (int j = image_height - 1; j >= 0; --j) {
+        for (int i = 0; i < image_width; ++i) {
+            write_color(fp, image[j * image_width + i], samples_per_pixel);
+        }
+    }
+
+    fclose(fp);
+}
+
+__device__ mytexture *move_to_device(mytexture *src) {
+    if (src->type == class_type::solid_color) {
+        return new solid_color(((solid_color *)src)->color_value);
+    }
+    if (src->type == class_type::checker) {
+        return new checker_texture(
+            move_to_device(((checker_texture *)src)->odd),
+            move_to_device(((checker_texture *)src)->even));
+    }
+    printf("error happend in %s:%d\n", __FILE__, __LINE__);
+}
+
+__device__ material *move_to_device(material *src) {
+    if (src->type == class_type::lambertian) {
+        return new lambertian(move_to_device(((lambertian *)src)->albedo));
+    }
+    if (src->type == class_type::metal) {
+        return new metal(((metal *)src)->albedo, ((metal *)src)->fuzz);
+    }
+    if (src->type == class_type::dielectric) {
+        return new dielectric(((dielectric *)src)->ir);
+    }
+    if (src->type == class_type::diffuse_light) {
+        return new diffuse_light(move_to_device(((diffuse_light *)src)->emit));
+    }
+    printf("error happend in %s:%d\n", __FILE__, __LINE__);
+}
+
+__device__ hittable *move_to_device(hittable *src) {
+    if (src->type == class_type::hittable_list) {
+        hittable_list *dst = new hittable_list();
+        dst->len = ((hittable_list *)src)->len;
+        dst->objects = new hittable *[dst->len];
+        for (int i = 0; i < dst->len; i++) {
+            dst->objects[i] =
+                move_to_device(((hittable_list *)src)->objects[i]);
+        }
+        return dst;
+    }
+    if (src->type == class_type::sphere) {
+        return new sphere(((sphere *)src)->center, ((sphere *)src)->radius,
+                          move_to_device(((sphere *)src)->mat_ptr));
+    }
+    printf("error happend in %s:%d\n", __FILE__, __LINE__);
+}
+
+__global__ void move_to_device(hittable **src, hittable **dst) {
+    *dst = move_to_device(*src);
+}
+
+int jsonmain(int argc, char *argv[]) {
+    // cpu 计时功能
+    auto start = clock();
+    when("Start counting time\n");
+
+    scene *world = parse_scene("sample_scene.json");
+    when("Finish parsing scene\n");
+
+    const int wrap = 8;
+    dim3 grids(world->width / wrap + 1, world->height / wrap + 1);
+    dim3 threads(wrap, wrap);
+
+    hittable **dev_world;
+    checkCudaErrors(cudaMalloc((void **)&dev_world, sizeof(hittable *)));
+    move_to_device<<<1, 1>>>(world->world, dev_world);
+    when("Finish the allocation of objects, world, camera\n");
+
+    auto dev_camera = world->cam;
+    when("Finish the allocation of objects, world, camera\n");
+
+    // 分配本地和显卡图像的空间
+    int num_of_pixels = world->height * world->width;
+    color *image;
+    checkCudaErrors(
+        cudaMallocManaged((void **)&image, sizeof(color) * num_of_pixels));
+    when("Finish the allocation of image\n");
+
+    // 随机化库的初始化操作
+    curandStateXORWOW_t *states;
+    checkCudaErrors(
+        cudaMalloc(&states, sizeof(curandStateXORWOW_t) * num_of_pixels));
+    when("Finish the memory allocation of random library\n");
+
+    // 随机数生成器的初始化操作
+    // UPDATE 将随机数初始化从 1xnum_of_pixels 改为
+    // num_of_pixelsx1，前者会超过线程数限制
+    init_constant();
+    init_random_library<<<num_of_pixels, 1>>>(states);
+
+    // 完成随机数库和常数的初始化
+    checkCudaErrors(cudaDeviceSynchronize());
+    when("Finish the initialization of random library and constants\n");
+
+    checkCudaErrors(cudaDeviceSynchronize());
+    when("Start rendering\n");
+
+    render<<<grids, threads>>>(world->samples_per_pixel, dev_camera, dev_world,
+                               world->max_depth, world->width, world->height,
+                               image, states);
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    when("Finish rendering\n");
+
+    output_image(image, world->width, world->height, world->samples_per_pixel,
+                 "main.ppm");
+
+    cudaDeviceReset();
+    return 0;
+}
+
+int main(int argc, char *argv[]) {
+    // oldmain(argc,argv);
+    jsonmain(argc, argv);
 }

@@ -26,6 +26,7 @@ add_executable(parser parser.cu ${COMMON_HEADERS})
 set_target_properties(parallel_compute PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON)
 target_link_libraries(parallel_compute nlohmann_json::nlohmann_json)
+target_compile_options(parallel_compute PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-G>)
 
 set_target_properties(parser PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON)

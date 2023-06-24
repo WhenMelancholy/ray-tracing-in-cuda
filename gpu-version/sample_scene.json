@@ -1,76 +1,137 @@
 {
-    "background": [0.1, 0.1, 0.1],
+    "background": [
+        0.1,
+        0.1,
+        0.1
+    ],
     "max_depth": 50,
     "samples_per_pixel": 100,
     "width": 1600,
     "height": 900,
     "camera": {
-        "lookfrom": [2, 2, -13],
-        "lookat": [0, 0, 0],
-        "vup": [0, 1, 0],
+        "lookfrom": [
+            2,
+            2,
+            -13
+        ],
+        "lookat": [
+            0,
+            0,
+            0
+        ],
+        "vup": [
+            0,
+            1,
+            0
+        ],
         "vfov": 20,
         "aperture": 0.1
     },
-    "object": [
-        {
-            "type": "sphere",
-            "center": [0, 0, -1],
-            "radius": 0.5,
-            "material": 0
-        },
-        {
-            "type": "sphere",
-            "center": [0, -100.5, -1],
-            "radius": 100,
-            "material": 1
-        },
-        {
-            "type": "sphere",
-            "center": [1, 0, -1],
-            "radius": 0.5,
-            "material": 2
-        },
-        {
-            "type": "sphere",
-            "center": [-1, 0, -1],
-            "radius": 0.5,
-            "material": 3
-        },
-        {
-            "type": "sphere",
-            "center": [-1, 0, -1],
-            "radius": -0.45,
-            "material": 3
-        }
-    ],
-    "material": [
-        {
-            "type": "lambertian",
-            "texture": 0
-        },
-        {
-            "type": "lambertian",
-            "texture": 1
-        }, {
-            "type": "metal",
-            "albedo": [0.8, 0.6, 0.2],
-            "fuzz": 0.0
-        }, {
-            "type": "dielectric",
-            "index_of_refraction": 1.5
-        }
-    ],
-    "texture": [
-        {
-            "type": "solid_color",
-            "color_value": [0.1, 0.2, 0.5]
-        },
-        {
-            "type": "solid_color",
-            "color_value": [0.8, 0.8, 0.0]
-        }, {
-            "type": "solid_color",
-            "color_value": [0.8, 0.6, 0.2]
-        }
-    ]
+    "object": {
+        "data": [
+            {
+                "type": "sphere",
+                "center": [
+                    0,
+                    0,
+                    -1
+                ],
+                "radius": 0.5,
+                "material": 0
+            },
+            {
+                "type": "sphere",
+                "center": [
+                    0,
+                    -100.5,
+                    -1
+                ],
+                "radius": 100,
+                "material": 1
+            },
+            {
+                "type": "sphere",
+                "center": [
+                    1,
+                    0,
+                    -1
+                ],
+                "radius": 0.5,
+                "material": 2
+            },
+            {
+                "type": "sphere",
+                "center": [
+                    -1,
+                    0,
+                    -1
+                ],
+                "radius": 0.5,
+                "material": 3
+            },
+            {
+                "type": "sphere",
+                "center": [
+                    -1,
+                    0,
+                    -1
+                ],
+                "radius": -0.45,
+                "material": 3
+            }
+        ]
+    },
+    "material": {
+        "data": [
+            {
+                "type": "lambertian",
+                "texture": 0
+            },
+            {
+                "type": "lambertian",
+                "texture": 1
+            },
+            {
+                "type": "metal",
+                "albedo": [
+                    0.8,
+                    0.6,
+                    0.2
+                ],
+                "fuzz": 0.0
+            },
+            {
+                "type": "dielectric",
+                "index_of_refraction": 1.5
+            }
+        ]
+    },
+    "texture": {
+        "data": [
+            {
+                "type": "solid_color",
+                "color": [
+                    0.1,
+                    0.2,
+                    0.5
+                ]
+            },
+            {
+                "type": "solid_color",
+                "color": [
+                    0.8,
+                    0.8,
+                    0.0
+                ]
+            },
+            {
+                "type": "solid_color",
+                "color": [
+                    0.8,
+                    0.6,
+                    0.2
+                ]
+            }
+        ]
+    }
 }

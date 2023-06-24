@@ -38,7 +38,7 @@ public:
                                         t * vertical - origin - offset);
     }
 
-private:
+public:
     point3 origin;
     point3 lower_left_corner;
     vec3 horizontal;
