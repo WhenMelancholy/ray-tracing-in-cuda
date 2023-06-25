@@ -239,6 +239,26 @@ material **parser_material(json &data) {
             data["material"]["data"][i]["device_ptr"] =
                 reinterpret_cast<uintptr_t>(dev_material);
         }
+        if (matdata["type"] == "diffuse_light") {
+            auto texture_id = matdata["texture"].get<int>();
+            host_materials[i] = new diffuse_light(reinterpret_cast<mytexture *>(
+                data["texture"]["data"][texture_id]["host_ptr"]
+                    .get<uintptr_t>()));
+            data["material"]["data"][i]["host_ptr"] =
+                reinterpret_cast<uintptr_t>(host_materials[i]);
+
+            material *dev_copy, *dev_material;
+            dev_copy = new diffuse_light(reinterpret_cast<mytexture *>(
+                data["texture"]["data"][texture_id]["device_ptr"]
+                    .get<uintptr_t>()));
+            checkCudaErrors(
+                cudaMalloc((void **)&dev_material, sizeof(diffuse_light)));
+            checkCudaErrors(cudaMemcpy(dev_material, dev_copy,
+                                       sizeof(diffuse_light),
+                                       cudaMemcpyHostToDevice));
+            data["material"]["data"][i]["device_ptr"] =
+                reinterpret_cast<uintptr_t>(dev_material);
+        }
     }
 
     material **dev_copy, **dev_materials;
@@ -286,6 +306,55 @@ hittable **parser_object(json &data) {
                         .get<uintptr_t>()));
             checkCudaErrors(cudaMalloc((void **)&dev_object, sizeof(sphere)));
             checkCudaErrors(cudaMemcpy(dev_object, dev_copy, sizeof(sphere),
+                                       cudaMemcpyHostToDevice));
+            data["object"]["data"][i]["device_ptr"] =
+                reinterpret_cast<uintptr_t>(dev_object);
+        }
+        if (objdata["type"] == "cylinder") {
+            auto radius = objdata["radius"].get<double>();
+            auto zmin = objdata["zmin"].get<double>();
+            auto zmax = objdata["zmax"].get<double>();
+            auto material_id = objdata["material"].get<int>();
+            host_objects[i] = new cylinder(
+                radius, zmin, zmax,
+                reinterpret_cast<material *>(
+                    data["material"]["data"][material_id]["host_ptr"]
+                        .get<uintptr_t>()));
+
+            if (objdata.contains("rotate")) {
+                auto axis = vec3(objdata["rotate"]["axis"][0].get<double>(),
+                                 objdata["rotate"]["axis"][1].get<double>(),
+                                 objdata["rotate"]["axis"][2].get<double>());
+                auto angle = objdata["rotate"]["angle"].get<double>();
+                ((cylinder *)host_objects[i])
+                    ->rotate(axis, angle / 180.0 * M_PI);
+                printf("rotate: %f %f %f %f\n", axis.x(), axis.y(), axis.z(),
+                       angle);
+                ((cylinder *)host_objects[i])
+                    ->rotate(axis, angle / 180.0 * M_PI);
+            }
+            if (objdata.contains("translate")) {
+                auto offset = vec3(objdata["translate"][0].get<double>(),
+                                   objdata["translate"][1].get<double>(),
+                                   objdata["translate"][2].get<double>());
+                ((cylinder *)host_objects[i])->translate(offset);
+                printf("translate: %f %f %f\n", offset.x(), offset.y(),
+                       offset.z());
+            }
+
+            data["object"]["data"][i]["host_ptr"] =
+                reinterpret_cast<uintptr_t>(host_objects[i]);
+
+            cylinder *dev_copy, *dev_object;
+            dev_copy = new cylinder(
+                radius, zmin, zmax,
+                reinterpret_cast<material *>(
+                    data["material"]["data"][material_id]["device_ptr"]
+                        .get<uintptr_t>()));
+            dev_copy->o2w = ((cylinder *)host_objects[i])->o2w;
+
+            checkCudaErrors(cudaMalloc((void **)&dev_object, sizeof(cylinder)));
+            checkCudaErrors(cudaMemcpy(dev_object, dev_copy, sizeof(cylinder),
                                        cudaMemcpyHostToDevice));
             data["object"]["data"][i]["device_ptr"] =
                 reinterpret_cast<uintptr_t>(dev_object);

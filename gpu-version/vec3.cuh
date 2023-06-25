@@ -154,6 +154,7 @@ __device__ vec3 random_in_unit_disk(curandState *state) {
     }
 }
 
+class ray;
 struct matrix4x4 {
     __device__ __host__ matrix4x4() {
         for (int i = 0; i < 4; ++i)
@@ -363,6 +364,8 @@ public:
                     m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
     }
 
+    __device__ __host__ ray apply_ray(const ray &r) const;
+
     // apply transform to normal vector p
     __device__ __host__ vec3 apply_normal(const vec3 &p) const {
         float x = p.x(), y = p.y(), z = p.z();
@@ -414,3 +417,5 @@ __device__ __host__ transform scale(float x, float y, float z) {
                    0, 1);
     return transform(m, minv);
 }
+
+__device__ __host__ transform identity() { return translate({0, 0, 0}); }

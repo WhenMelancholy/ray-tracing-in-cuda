@@ -3,6 +3,7 @@
 #include "hittable.cuh"
 #include "vec3.cuh"
 
+#include <assert.h>
 #include <cuda.h>
 
 // FIX 由于 device_vector 无法在 device
@@ -85,10 +86,10 @@ public:
 private:
     __device__ static void get_sphere_uv(const point3 &p, float &u, float &v) {
         auto theta = acos(-p.y());
-        auto phi = atan2(-p.z(), p.x()) + pi;
+        auto phi = atan2(-p.z(), p.x()) + M_PI;
 
-        u = phi / (2 * pi);
-        v = theta / pi;
+        u = phi / (2 * M_PI);
+        v = theta / M_PI;
     }
 };
 
@@ -202,13 +203,8 @@ __device__ __host__ bool quadratic(float a, float b, float c, float &t0,
         return false;
     float sqrt_delta = sqrt(delta);
 
-    float q;
-    if (b < 0)
-        q = -0.5f * (b - sqrt_delta);
-    else
-        q = -0.5f * (b + sqrt_delta);
-    t0 = q / a;
-    t1 = c / q;
+    t0 = -0.5f * (b - sqrt_delta) / a;
+    t1 = -0.5f * (b + sqrt_delta) / a;
     if (t0 > t1) {
         float temp = t0;
         t0 = t1;
@@ -226,11 +222,22 @@ public:
         : hittable(class_type::cylinder), radius(_radius), zmin(_zmin),
           zmax(_zmax), mat_ptr(mat){};
 
+    __device__ __host__ void rotate(vec3 axis, float rad) {
+        o2w = ::rotate(axis, rad) * o2w;
+    }
+
+    __device__ __host__ void translate(vec3 offset) {
+        o2w = ::translate(offset) * o2w;
+    }
+
     __device__ virtual bool hit(const ray &r, float t_min, float t_max,
                                 hit_record &rec) const override {
-        auto dx = r.direction().x(), dy = r.direction().y(),
-             dz = r.direction().z();
-        auto ox = r.origin().x(), oy = r.origin().y(), oz = r.origin().z();
+        auto object_ray = o2w.inverse().apply_ray(r);
+
+        auto dx = object_ray.direction().x(), dy = object_ray.direction().y(),
+             dz = object_ray.direction().z();
+        auto ox = object_ray.origin().x(), oy = object_ray.origin().y(),
+             oz = object_ray.origin().z();
         // solve quadratic equation for t values
         float a = dx * dx + dy * dy;
         float b = 2 * (dx * ox + dy * oy);
@@ -238,6 +245,11 @@ public:
         float t0, t1;
         if (!quadratic(a, b, c, t0, t1))
             return false;
+        if (t0 > t1) {
+            float temp = t0;
+            t0 = t1;
+            t1 = temp;
+        }
         if (t0 > t_max || t1 < t_min)
             return false;
         float t = t0;
@@ -247,19 +259,31 @@ public:
                 return false;
         }
         // compute sphere hit position and phi and fill hit record
-        rec.p = r.at(t);
-        rec.set_face_normal(
-            r, vec3((rec.p.x() - ox) / radius, (rec.p.y() - oy) / radius, 0));
+        auto object_p = object_ray.at(t);
+        if (object_p.z() < zmin || object_p.z() > zmax) {
+            if (t == t1)
+                return false;
+            t = t1;
+            object_p = object_ray.at(t);
+            if (object_p.z() < zmin || object_p.z() > zmax)
+                return false;
+        }
+        auto object_normal = vec3(object_p.x(), object_p.y(), 0).normalize();
+
+        auto world_p = o2w.apply_point(object_p);
+        auto world_normal = o2w.apply_normal(object_normal);
+
+        rec.p = world_p;
+        rec.set_face_normal(r, world_normal);
         rec.mat_ptr = mat_ptr;
         rec.t = t;
 
-        float phi = atan2(rec.p.y(), rec.p.x());
-        if (phi < 0)
-            phi += 2 * pi;
-        if (rec.p.z() < zmin || rec.p.z() > zmax || phi < 0 || phi > 2 * pi)
-            return false;
-        rec.u = phi / (2 * pi);
-        rec.v = (rec.p.z() - zmin) / (zmax - zmin);
+        float phi = atan2(object_p.y(), object_p.x());
+        phi += 2 * M_PI;
+        assert(0 <= phi && phi <= 4 * M_PI);
+
+        rec.u = phi / (4 * M_PI);
+        rec.v = (object_p.z() - zmin) / (zmax - zmin);
         return true;
     }
 
@@ -267,4 +291,5 @@ public:
     material *mat_ptr{};
     float radius{};
     float zmin{}, zmax{};
+    transform o2w{identity()};
 };

@@ -1,10 +1,15 @@
 {
-  "name" : "parallel-compute",
-  "version-string" : "1.0.0",
-  "builtin-baseline" : "b8d272a463101415ab4f57545c4e1a1d2c24aafe",
-  "dependencies" : [ {
-    "name" : "nlohmann-json",
-    "version>=" : "3.11.2",
-    "$comment" : "    find_package(nlohmann_json CONFIG REQUIRED)\n\n    target_link_libraries(main PRIVATE nlohmann_json::nlohmann_json)\n"
-  } ]
+  "name": "parallel-compute",
+  "version-string": "1.0.0",
+  "builtin-baseline": "b8d272a463101415ab4f57545c4e1a1d2c24aafe",
+  "dependencies": [
+    {
+      "name": "nlohmann-json",
+      "version>=": "3.11.2",
+      "$comment": "    find_package(nlohmann_json CONFIG REQUIRED)\n\n    target_link_libraries(main PRIVATE nlohmann_json::nlohmann_json)\n"
+    },
+    {
+      "name": "stb"
+    }
+  ]
 }

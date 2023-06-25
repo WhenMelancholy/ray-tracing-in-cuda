@@ -146,9 +146,8 @@ __global__ void random_scene(hittable **list, hittable **world, camera **cam,
         point3 lookat(0, 0, 0);
         vec3 vup(0, 1, 0);
         auto dist_to_focus = (lookfrom - lookat).length();
-        auto aperture = 0.1;
         //        *cam = new camera(lookfrom, lookat, vup, 20,
-        //        float(image_width) / float(image_height), aperture,
+        //        float(image_width) / float(image_height), 0.1,
         //        dist_to_focus);
 
         *cam = new camera(vec3(-2, 2, 1), vec3(0, 0, -1), vec3(0, 1, 0), 20.0,
@@ -413,6 +412,14 @@ __device__ hittable *move_to_device(hittable *src) {
         return new sphere(((sphere *)src)->center, ((sphere *)src)->radius,
                           move_to_device(((sphere *)src)->mat_ptr));
     }
+    if (src->type == class_type::cylinder) {
+        auto dev_obj =
+            new cylinder(((cylinder *)src)->radius, ((cylinder *)src)->zmin,
+                         ((cylinder *)src)->zmax,
+                         move_to_device(((cylinder *)src)->mat_ptr));
+        dev_obj->o2w = ((cylinder *)src)->o2w;
+        return dev_obj;
+    }
     printf("error happend in %s:%d\n", __FILE__, __LINE__);
 }
 
@@ -475,6 +482,7 @@ int jsonmain(int argc, char *argv[]) {
 
     output_image(image, world->width, world->height, world->samples_per_pixel,
                  "main.ppm");
+    write_image(world->width, world->height, image, world->samples_per_pixel);
 
     cudaDeviceReset();
     return 0;

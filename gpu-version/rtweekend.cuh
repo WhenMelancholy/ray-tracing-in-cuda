@@ -10,10 +10,8 @@
 //__constant__ float inf;
 //__constant__ float pi;
 
-#define pi 3.14159265f
-
 __device__ __host__ float degrees_to_radians(float degrees) {
-    return degrees * pi / 180.0f;
+    return degrees * M_PI / 180.0f;
 }
 
 // UPDATE 应该使用 uniform，normal 是正态分布

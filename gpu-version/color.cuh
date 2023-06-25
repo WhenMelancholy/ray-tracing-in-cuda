@@ -6,6 +6,34 @@
 #include <cstdio>
 #include <cuda.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+// write image to main.png using stb_image_write
+void write_image(int width, int height, color *image, int samples_per_pixel,
+                 std::string filename = "main.png", int channels = 3) {
+    unsigned char *data = new unsigned char[width * height * channels];
+    int count = 0;
+    for (int j = height - 1; j >= 0; --j)
+        for (int i = 0; i < width; ++i) {
+            data[count++] = static_cast<unsigned char>(
+                256 *
+                clamp(image[j * width + i].x() / samples_per_pixel, 0, 0.999));
+            data[count++] = static_cast<unsigned char>(
+                256 *
+                clamp(image[j * width + i].y() / samples_per_pixel, 0, 0.999));
+            data[count++] = static_cast<unsigned char>(
+                256 *
+                clamp(image[j * width + i].z() / samples_per_pixel, 0, 0.999));
+        }
+
+    stbi_write_png(filename.c_str(), width, height, channels, data,
+                   width * channels);
+    delete[] data;
+}
+
 void write_color(std::ostream &out, color c) {
     out << static_cast<int>(255.99 * c.x()) << ' '
         << static_cast<int>(255.99 * c.y()) << ' '
