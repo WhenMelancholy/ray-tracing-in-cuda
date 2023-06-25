@@ -1,0 +1,40 @@
+{
+    "output_file": "output/main.png",
+    "background": [
+        0.5,
+        0.7,
+        0.99
+    ],
+    "max_depth": 50,
+    "samples_per_pixel": 100,
+    "width": 800,
+    "height": 450,
+    "camera": {
+        "lookfrom": [
+            0,
+            0,
+            -50
+        ],
+        "lookat": [
+            0,
+            0,
+            0
+        ],
+        "vup": [
+            0,
+            1,
+            0
+        ],
+        "vfov": 20,
+        "aperture": 0.1
+    },
+    "object": {
+        "data": []
+    },
+    "material": {
+        "data": []
+    },
+    "texture": {
+        "data": []
+    }
+}

@@ -330,8 +330,6 @@ hittable **parser_object(json &data) {
                     ->rotate(axis, angle / 180.0 * M_PI);
                 printf("rotate: %f %f %f %f\n", axis.x(), axis.y(), axis.z(),
                        angle);
-                ((cylinder *)host_objects[i])
-                    ->rotate(axis, angle / 180.0 * M_PI);
             }
             if (objdata.contains("translate")) {
                 auto offset = vec3(objdata["translate"][0].get<double>(),

@@ -33,7 +33,6 @@ target_link_libraries(parallel_compute nlohmann_json::nlohmann_json)
 # target_compile_options(parallel_compute PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler -rdynamic>)
 # target_compile_options(parallel_compute PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-maxrregcount=64>)
 
-
 set_target_properties(parser PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON)
 target_link_libraries(parser nlohmann_json::nlohmann_json)
@@ -41,3 +40,4 @@ target_include_directories(parser PRIVATE ${Stb_INCLUDE_DIR})
 
 
 configure_file(sample_scene.json sample_scene.json COPYONLY)
+configure_file(basic_scene.json basic_scene.json COPYONLY)
