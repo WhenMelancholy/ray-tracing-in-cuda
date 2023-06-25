@@ -432,7 +432,17 @@ int jsonmain(int argc, char *argv[]) {
     auto start = clock();
     when("Start counting time\n");
 
-    scene *world = parse_scene("sample_scene.json");
+    // parse scene file name from argc
+    std::string scene_file_name = "sample_scene.json";
+    for (int i = 0; i < argc; i++) {
+        if (strcmp(argv[i], "-f") == 0) {
+            scene_file_name = argv[i + 1];
+        }
+    }
+
+    scene *world;
+    json data;
+    std::tie(world, data) = parse_scene(scene_file_name);
     when("Finish parsing scene\n");
 
     const int wrap = 8;
@@ -482,7 +492,9 @@ int jsonmain(int argc, char *argv[]) {
 
     output_image(image, world->width, world->height, world->samples_per_pixel,
                  "main.ppm");
-    write_image(world->width, world->height, image, world->samples_per_pixel);
+    write_image(world->width, world->height, image, world->samples_per_pixel,
+                data["output_file"].get<std::string>());
+    when("Finish writing image\n");
 
     cudaDeviceReset();
     return 0;

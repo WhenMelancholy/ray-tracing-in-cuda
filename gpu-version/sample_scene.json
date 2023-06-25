@@ -1,13 +1,14 @@
 {
+    "output_file": "output/main.png",
     "background": [
         0.5,
         0.7,
         0.99
     ],
     "max_depth": 50,
-    "samples_per_pixel": 5000,
-    "width": 3200,
-    "height": 1800,
+    "samples_per_pixel": 100,
+    "width": 1600,
+    "height": 900,
     "camera": {
         "lookfrom": [
             0,

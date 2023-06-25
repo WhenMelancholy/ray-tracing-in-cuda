@@ -404,7 +404,7 @@ hittable **parser_world(json &data) {
     return host_world;
 }
 
-scene *parse_scene(const std::string &filename) {
+std::tuple<scene *, json> parse_scene(const std::string &filename) {
     std::ifstream file(filename);
     json data = json::parse(file);
 
@@ -467,7 +467,10 @@ scene *parse_scene(const std::string &filename) {
     data["device_copy"] = reinterpret_cast<uintptr_t>(dev_copy);
     data["device_ptr"] = reinterpret_cast<uintptr_t>(dev_scene);
 
+    if (data.contains("output_file") == false)
+        data["output_file"] = "main.png";
+
     std::cout << data.dump(4) << std::endl;
 
-    return dev_copy;
+    return {dev_copy, data};
 }
