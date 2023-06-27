@@ -10,6 +10,10 @@
 //__constant__ float inf;
 //__constant__ float pi;
 
+#ifndef M_PI
+#define M_PI 3.1415926
+#endif
+
 __device__ __host__ float degrees_to_radians(float degrees) {
     return degrees * M_PI / 180.0f;
 }
