@@ -54,7 +54,7 @@ for angle in range(0, 360 * 10, 360 // 24):
 
         scene["texture"]["data"].append({
             "type": "solid_color",
-            "color": [id/20+0.5, 0, 0]
+            "color": [0.5, 0, 0]
         })
     # save file to ./build/scene/scene_00{frame}.json
     with open("./build/scene/scene_{:03d}.json".format(frame), "w") as f:
@@ -62,7 +62,7 @@ for angle in range(0, 360 * 10, 360 // 24):
     frame += 1
 
 # render scene
-for i in tqdm.tqdm(range(frame)):
+for i in tqdm.tqdm(range(3)):
     val = os.system(
         "./build/parallel_compute -f ./build/scene/scene_{:03d}.json".format(i, i))
     if val != 0:

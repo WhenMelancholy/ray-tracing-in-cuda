@@ -264,6 +264,8 @@ public:
             if (t == t1)
                 return false;
             t = t1;
+            if (t > t_max || t < t_min)
+                return false;
             object_p = object_ray.at(t);
             if (object_p.z() < zmin || object_p.z() > zmax)
                 return false;
