@@ -123,6 +123,9 @@ class World:
     def __init__(self):
         self.spheres = []
 
+    def clear(self):
+        self.spheres = []
+
     def add(self, sphere):
         sphere.id = len(self.spheres)
         self.spheres.append(sphere)
@@ -168,7 +171,26 @@ class World:
                 #print(texture[i][j])
                 self.materials.settexture(0,i,j, texture[i][j])
         # self.materials.showtexture(0)
-        # del self.spheres
+        del self.spheres
+
+    def update(self):
+        self.n = len(self.spheres)
+
+        self.bvh = BVH(self.spheres)
+        self.bvh.build()
+        for i in range(self.n):
+            self.center[i] = self.spheres[i].center
+            self.radius[i] = self.spheres[i].radius
+            if self.radius[i]==0:
+                self.v1[i] = self.spheres[i].v1
+                self.v2[i] = self.spheres[i].v2
+                self.v3[i] = self.spheres[i].v3
+                self.u1[i] = self.spheres[i].u1
+                self.u2[i] = self.spheres[i].u2
+                self.u3[i] = self.spheres[i].u3
+                self.nor[i] = self.spheres[i].normal
+            self.materials.set(i, self.spheres[i].material)
+        del self.spheres
 
     def bounding_box(self, i):
         return self.bvh_min(i), self.bvh_max(i)

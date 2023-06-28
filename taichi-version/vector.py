@@ -2,6 +2,7 @@ import taichi_glsl as ts
 import taichi as ti
 import math
 
+Mat = ts.mat
 Vector = ts.vec3
 Vector2 = ts.vec2
 Color = ts.vec3

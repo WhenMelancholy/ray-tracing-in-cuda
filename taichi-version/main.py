@@ -40,6 +40,19 @@ def readobj(dir):
     #points = np.array(points)
     return points,faces,texids
 
+def readdynamic(dir):
+    # read obj from asset
+    with open(dir) as file:
+        points = []
+        while 1:
+            line = file.readline()
+            if not line:
+                break
+            strs = line.split(" ")
+            points.append(Point(float(strs[0]), float(strs[1]), float(strs[2])))
+    #points = np.array(points)
+    return points
+
 if __name__ == '__main__':
     # image data
     aspect_ratio = 16.0 / 9.0
@@ -56,8 +69,7 @@ if __name__ == '__main__':
     samples_per_pixel = 50
     max_depth = 16
 
-    # mesh
-    xc,tc,texc= readobj('.\\asset\\cube.obj')
+    
     # materials
     mat_ground = Lambert([0.5, 0.5, 0.5])
     mat2 = Lambert([0.4, 0.2, 0.2])
@@ -67,7 +79,10 @@ if __name__ == '__main__':
     # world
     R = math.cos(math.pi / 4.0)
     world = World()
-    def initial_world(st):       
+    # mesh
+    xc,tc,texc= readobj('.\\asset\\plane.obj')
+    def initial_world(st):  
+        xc = readdynamic('.\\asset\\points\\'+str(st+1)+'.txt')     
         #world.add(Sphere([0.0, -10, 0], 10.0, mat_ground))
         static_point = Point(4.0, 0.2, 0.0)
         random.seed(2023)
@@ -91,19 +106,25 @@ if __name__ == '__main__':
                             random.random() * 0.5)
                     else:
                         mat = Dielectric(1.5)
-
                 #world.add(Sphere(center, 0.2, mat))
+        # 物体移动和放缩
+        # 目前只支持一个物体
         scale = 1.0
-        dis = Point(4.0,-1.0,2.0)
+        dis = Point(4.0,1.0,2.0)
+        Rot = Mat([0,0,1],[0,1,0],[1,0,0])
         for i in range(len(tc)):
+            # 添加每一个三角面片
             face = tc[i]
-            world.add(Triangle(scale*xc[face[0]]+dis, scale*xc[face[1]]+dis,scale*xc[face[2]]+dis,texc[face[0]],texc[face[1]] ,texc[face[2]] , mat4))
+            world.add(Triangle(scale*Rot@xc[face[0]]+dis, scale*Rot@xc[face[1]]+dis,scale*Rot@xc[face[2]]+dis,texc[face[0]],texc[face[1]] ,texc[face[2]] , mat4))
         # world.add(Triangle(Point(0.0,0.0,0.0), Point(0.0,0.0,4.0),Point(4.0,0.0,0.0), mat2))
         # print(st)
         world.add(Sphere([0.0, 1.0, 1.0], 1.0, mat1))
         world.add(Sphere([-4.0, 1.0, 0.0], 1.0, mat2))
         world.add(Sphere([4.0, 1.0, 0.0], 1.0, mat3))
-        world.commit()
+        if st==0:
+            world.commit()
+        else:
+            world.update()
 
     # camera
     vfrom = Point(13.0, 2.0, 3.0)
@@ -128,7 +149,7 @@ if __name__ == '__main__':
             needs_sample[x, y] = 1
     num_pixels = image_width * image_height
 
-    for i in range(1):
+    for i in range(300):
         t = time()
         @ti.kernel
         def wavefront_big() -> ti.i32:
@@ -181,7 +202,7 @@ if __name__ == '__main__':
             return num_completed
         print('step:',i)
         print('starting initial world')
-        world = World()
+        world.clear()
         initial_world(i)
         print('starting big wavefront')
         wavefront_initial()
