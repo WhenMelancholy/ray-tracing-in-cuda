@@ -1,4 +1,4 @@
-import taichi_glsl as ts
+import vec3 as ts
 import taichi as ti
 import math
 
@@ -10,7 +10,8 @@ Point = ts.vec3
 WHITE = Color(1.0, 1.0, 1.0)
 BLUE = Color(0.5, 0.7, 1.0)
 RED = Color(1.0, 0.0, 0.0)
-GREEN = Color(0.0,1.0,0.0)
+GREEN = Color(0.0, 1.0, 0.0)
+
 
 @ti.func
 def random_in_unit_disk():

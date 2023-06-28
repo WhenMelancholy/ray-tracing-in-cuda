@@ -33,19 +33,38 @@ def sort_obj_list(obj_list):
         return e.center[2]
 
     centers = [obj.center for obj in obj_list]
-    min_center = [
-        min([center[0] for center in centers]),
-        min([center[1] for center in centers]),
-        min([center[2] for center in centers])
-    ]
-    max_center = [
-        max([center[0] for center in centers]),
-        max([center[1] for center in centers]),
-        max([center[2] for center in centers])
-    ]
-    span_x, span_y, span_z = (max_center[0] - min_center[0],
-                              max_center[1] - min_center[1],
-                              max_center[2] - min_center[2])
+    try:
+        min_center = [
+            min([center[0] for center in centers]),
+            min([center[1] for center in centers]),
+            min([center[2] for center in centers])
+        ]
+        max_center = [
+            max([center[0] for center in centers]),
+            max([center[1] for center in centers]),
+            max([center[2] for center in centers])
+        ]
+        span_x, span_y, span_z = (
+            max_center[0] - min_center[0],
+            max_center[1] - min_center[1],
+            max_center[2] - min_center[2]
+        )
+    except AssertionError:
+        min_center = [
+            min([center[0, :] for center in centers]),
+            min([center[1, :] for center in centers]),
+            min([center[2, :] for center in centers])
+        ]
+        max_center = [
+            max([center[0, :] for center in centers]),
+            max([center[1, :] for center in centers]),
+            max([center[2, :] for center in centers])
+        ]
+        span_x, span_y, span_z = (
+            max_center[0, :] - min_center[0, :],
+            max_center[1, :] - min_center[1, :],
+            max_center[2, :] - min_center[2, :]
+        )
     if span_x >= span_y and span_x >= span_z:
         obj_list.sort(key=get_x)
     elif span_y >= span_z:
@@ -109,6 +128,7 @@ class BVHNode:
 class BVH:
     ''' The BVH class takes a list of objects and creates a bvh from them.
         The bvh structure contains a "next" pointer for walking the tree. '''
+
     def __init__(self, object_list):
         self.root = BVHNode(object_list, None)
 

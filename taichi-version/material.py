@@ -1,7 +1,7 @@
 import taichi as ti
-from taichi_glsl.vector import reflect
 from vector import *
 import cv2
+
 
 @ti.func
 def reflectance(cosine, idx):
@@ -28,7 +28,7 @@ class _material:
 
 
 class Lambert(_material):
-    def __init__(self, color,index = 0):
+    def __init__(self, color, index=0):
         self.color = color
         self.index = index
         self.roughness = 0.0
@@ -89,16 +89,17 @@ class Dielectric(_material):
 @ti.data_oriented
 class Materials:
     ''' List of materials for a scene.'''
+
     def __init__(self, n):
         self.roughness = ti.field(ti.f32)
         self.colors = ti.Vector.field(3, dtype=ti.f32)
         self.mat_index = ti.field(ti.u32)
         self.ior = ti.field(ti.f32)
-        self.texture = ti.Vector.field(3,dtype=ti.uint8)
+        self.texture = ti.Vector.field(3, dtype=ti.uint8)
         ti.root.dense(ti.i, n).place(self.roughness, self.colors,
                                      self.mat_index, self.ior)
-        ti.root.dense(ti.ijk, (1,100,100)).place(self.texture)
-        #ti.root.dense(ti.i,1).dense(ti.j,400).dense(ti.k,400).place(self.texture)
+        ti.root.dense(ti.ijk, (1, 100, 100)).place(self.texture)
+        # ti.root.dense(ti.i,1).dense(ti.j,400).dense(ti.k,400).place(self.texture)
 
     def set(self, i, material):
         self.colors[i] = material.color
@@ -106,15 +107,16 @@ class Materials:
         self.roughness[i] = material.roughness
         self.ior[i] = material.ior
 
-    def settexture(self, i , j , k , texture):
-        self.texture[i,j,k] = Vector(texture[0],texture[1],texture[2])
+    def settexture(self, i, j, k, texture):
+        self.texture[i, j, k] = Vector(texture[0], texture[1], texture[2])
 
     def showtexture(self, i):
         for j in range(100):
             for k in range(100):
-                print(self.texture[i,j,k])
+                print(self.texture[i, j, k])
+
     @ti.func
-    def scatter(self, i, ray_direction, p, uv,n, front_facing):
+    def scatter(self, i, ray_direction, p, uv, n, front_facing):
         ''' Get the scattered ray that hits a material '''
         mat_index = self.mat_index[i]
         color = self.colors[i]
@@ -134,12 +136,13 @@ class Materials:
         elif mat_index == 2:
             reflected, out_origin, out_direction, attenuation = Dielectric.scatter(
                 ray_direction, p, n, color, ior, front_facing)
-        else :
+        else:
             x = int((uv[0]-ti.floor(uv[0]))*100)
             y = int((uv[1]-ti.floor(uv[1]))*100)
-            
-            color = Color((self.texture[0,x,y][2])/255.0,(self.texture[0,x,y][1])/255.0,(self.texture[0,x,y][0])/255.0)
-            #print(color)
+
+            color = Color((self.texture[0, x, y][2])/255.0, (self.texture[0,
+                          x, y][1])/255.0, (self.texture[0, x, y][0])/255.0)
+            # print(color)
             reflected, out_origin, out_direction, attenuation = Lambert.scatter(
                 ray_direction, p, n, color)
         return reflected, out_origin, out_direction, attenuation

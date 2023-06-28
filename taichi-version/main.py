@@ -2,7 +2,7 @@ import taichi as ti
 from vector import *
 import ray
 from time import time
-from hittable import World, Sphere,Triangle
+from hittable import World, Sphere, Triangle
 from camera import Camera
 from material import *
 import math
@@ -13,12 +13,14 @@ import random
 ti.init(arch=ti.gpu)
 random.seed(2023)
 
+
 @ti.func
 def get_background(dir):
     ''' Returns the background color for a given direction vector '''
     unit_direction = dir.normalized()
     t = 0.5 * (unit_direction[1] + 1.0)
     return (1.0 - t) * WHITE + t * BLUE
+
 
 def readobj(dir):
     # read obj from asset
@@ -32,13 +34,15 @@ def readobj(dir):
                 break
             strs = line.split(" ")
             if strs[0] == "v":
-                points.append(Point(float(strs[1]), float(strs[2]), float(strs[3])))
+                points.append(
+                    Point(float(strs[1]), float(strs[2]), float(strs[3])))
             if strs[0] == "f":
                 faces.append([int(strs[1])-1, int(strs[2])-1, int(strs[3])-1])
-            if strs[0] == "vt":  
-                texids.append(Vector2(float(strs[1]),float(strs[2])))
-    #points = np.array(points)
-    return points,faces,texids
+            if strs[0] == "vt":
+                texids.append(Vector2(float(strs[1]), float(strs[2])))
+    # points = np.array(points)
+    return points, faces, texids
+
 
 if __name__ == '__main__':
     # image data
@@ -57,47 +61,49 @@ if __name__ == '__main__':
     max_depth = 16
 
     # mesh
-    xc,tc,texc= readobj('.\\asset\\cube.obj')
+    xc, tc, texc = readobj('./asset/cube.obj')
     # materials
     mat_ground = Lambert([0.5, 0.5, 0.5])
     mat2 = Lambert([0.4, 0.2, 0.2])
     mat1 = Dielectric(1.5)
     mat3 = Metal([0.7, 0.6, 0.5], 0.0)
-    mat4 = Lambert(Color(random.random(), random.random(),random.random()),3)
+    mat4 = Lambert(Color(random.random(), random.random(), random.random()), 3)
     # world
     R = math.cos(math.pi / 4.0)
     world = World()
-    def initial_world(st):       
-        #world.add(Sphere([0.0, -10, 0], 10.0, mat_ground))
+
+    def initial_world(st):
+        # world.add(Sphere([0.0, -10, 0], 10.0, mat_ground))
         static_point = Point(4.0, 0.2, 0.0)
         random.seed(2023)
         for a in range(-11, 11):
-            for b in range(-11, 11):               
+            for b in range(-11, 11):
                 choose_mat = random.random()
                 center = Point(a + 0.9 * random.random(), 0.2,
-                            b + 0.9 * random.random())
+                               b + 0.9 * random.random())
 
                 if (center - static_point).norm() > 0.9:
                     if choose_mat < 0.8:
                         # diffuse
                         mat = Lambert(
                             Color(random.random(), random.random(),
-                                random.random())**2)
+                                  random.random())**2)
                     elif choose_mat < 0.95:
                         # metal
                         mat = Metal(
                             Color(random.random(), random.random(),
-                                random.random()) * 0.5 + 0.5,
+                                  random.random()) * 0.5 + 0.5,
                             random.random() * 0.5)
                     else:
                         mat = Dielectric(1.5)
 
-                #world.add(Sphere(center, 0.2, mat))
+                # world.add(Sphere(center, 0.2, mat))
         scale = 1.0
-        dis = Point(4.0,-1.0,2.0)
+        dis = Point(4.0, -1.0, 2.0)
         for i in range(len(tc)):
             face = tc[i]
-            world.add(Triangle(scale*xc[face[0]]+dis, scale*xc[face[1]]+dis,scale*xc[face[2]]+dis,texc[face[0]],texc[face[1]] ,texc[face[2]] , mat4))
+            world.add(Triangle(scale*xc[face[0]]+dis, scale*xc[face[1]]+dis, scale *
+                      xc[face[2]]+dis, texc[face[0]], texc[face[1]], texc[face[2]], mat4))
         # world.add(Triangle(Point(0.0,0.0,0.0), Point(0.0,0.0,4.0),Point(4.0,0.0,0.0), mat2))
         # print(st)
         world.add(Sphere([0.0, 1.0, 1.0], 1.0, mat1))
@@ -130,6 +136,7 @@ if __name__ == '__main__':
 
     for i in range(1):
         t = time()
+
         @ti.kernel
         def wavefront_big() -> ti.i32:
             ''' Loops over pixels
@@ -160,14 +167,15 @@ if __name__ == '__main__':
                     ray_org, ray_dir, depth, pdf = rays.get(x, y)
 
                 # intersect
-                hit, p, uv,n, front_facing, index = world.hit_all(ray_org, ray_dir)
+                hit, p, uv, n, front_facing, index = world.hit_all(
+                    ray_org, ray_dir)
                 depth -= 1
                 rays.depth[x, y] = depth
                 if hit:
                     reflected, out_origin, out_direction, attenuation = world.materials.scatter(
-                        index, ray_dir, p, uv,n, front_facing)
+                        index, ray_dir, p, uv, n, front_facing)
                     rays.set(x, y, out_origin, out_direction, depth,
-                            pdf * attenuation)
+                             pdf * attenuation)
                     ray_dir = out_direction
 
                 if not hit or depth == 0:
@@ -179,7 +187,7 @@ if __name__ == '__main__':
                         num_completed += 1
 
             return num_completed
-        print('step:',i)
+        print('step:', i)
         print('starting initial world')
         world = World()
         initial_world(i)
@@ -191,5 +199,5 @@ if __name__ == '__main__':
             # print('completed', num_completed)
 
         finish()
-        print('time is:',time() - t)
-        ti.imwrite(pixels.to_numpy(), '.\\output\\out'+str(i)+'.jpg')
+        print('time is:', time() - t)
+        ti.imwrite(pixels.to_numpy(), './output/out'+str(i)+'.jpg')
