@@ -406,7 +406,8 @@ __device__ hittable *move_to_device(hittable *src) {
             dst->objects[i] =
                 move_to_device(((hittable_list *)src)->objects[i]);
         }
-        return new bvh_node(dst->objects, 0, dst->len);
+        // return new bvh_node(dst->objects, 0, dst->len);
+        return dst;
     }
     if (src->type == class_type::sphere) {
         return new sphere(((sphere *)src)->center, ((sphere *)src)->radius,
@@ -428,6 +429,7 @@ __global__ void move_to_device(hittable **src, hittable **dst) {
 }
 
 int jsonmain(int argc, char *argv[]) {
+    cudaDeviceSetLimit(cudaLimitStackSize, 8192 * 4);
     // cpu 计时功能
     auto start = clock();
     when("Start counting time\n");

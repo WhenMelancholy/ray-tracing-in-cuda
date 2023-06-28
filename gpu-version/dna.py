@@ -2,6 +2,7 @@ import json
 import os
 import math
 import tqdm
+import time
 
 os.system("mkdir -p ./build/scene")
 os.system("mkdir -p ./build/output")
@@ -70,10 +71,14 @@ for angle in range(0, 360, 60 // framerate):
         json.dump(scene, f)
     frame += 1
 
+starttime = time.time()
+
 # render scene
-for i in tqdm.tqdm(range(frame)):
+for i in tqdm.tqdm(range(3)):
     val = os.system(
         "./build/parallel_compute -f ./build/scene/scene_{:03d}.json".format(i, i))
     if val != 0:
         print("render failed of frame {}".format(i))
         exit(1)
+
+print("total time: {}s".format(time.time()-starttime))
