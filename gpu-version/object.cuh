@@ -35,6 +35,24 @@ public:
 
         return hit_anything;
     }
+
+    __device__ virtual bool bounding_box(aabb &output_box) const override {
+        if (len < 1)
+            return false;
+        aabb temp_box;
+        bool first_true = objects[0]->bounding_box(temp_box);
+        if (!first_true)
+            return false;
+        else
+            output_box = temp_box;
+        for (int i = 1; i < len; ++i) {
+            if (objects[i]->bounding_box(temp_box))
+                output_box = surrounding_box(output_box, temp_box);
+            else
+                return false;
+        }
+        return true;
+    }
 };
 
 class sphere : public hittable {
@@ -71,6 +89,12 @@ public:
         get_sphere_uv(normal, rec.u, rec.v);
         rec.mat_ptr = mat_ptr;
 
+        return true;
+    }
+
+    __device__ virtual bool bounding_box(aabb &output_box) const override {
+        output_box = aabb(center - vec3(radius, radius, radius),
+                          center + vec3(radius, radius, radius));
         return true;
     }
 
@@ -121,6 +145,14 @@ public:
         return true;
     }
 
+    __device__ virtual bool bounding_box(aabb &output_box) const override {
+        // The bounding box must have non-zero width in each dimension, so pad
+        // the Z dimension a small amount.
+        output_box =
+            aabb(point3(x0, y0, k - 0.0001), point3(x1, y1, k + 0.0001));
+        return true;
+    }
+
     //    __device__ virtual ~xy_rect() override {
     //        delete mp;
     //    }
@@ -158,6 +190,14 @@ public:
         return true;
     }
 
+    __device__ virtual bool bounding_box(aabb &output_box) const override {
+        // The bounding box must have non-zero width in each dimension, so pad
+        // the Y dimension a small amount.
+        output_box =
+            aabb(point3(x0, k - 0.0001, z0), point3(x1, k + 0.0001, z1));
+        return true;
+    }
+
 public:
     material *mp{};
     float x0{}, x1{}, z0{}, z1{}, k{};
@@ -188,6 +228,14 @@ public:
         rec.set_face_normal(r, outward_normal);
         rec.mat_ptr = mp;
         rec.p = r.at(t);
+        return true;
+    }
+
+    __device__ virtual bool bounding_box(aabb &output_box) const override {
+        // The bounding box must have non-zero width in each dimension, so pad
+        // the X dimension a small amount.
+        output_box =
+            aabb(point3(k - 0.0001, y0, z0), point3(k + 0.0001, y1, z1));
         return true;
     }
 
@@ -289,9 +337,81 @@ public:
         return true;
     }
 
+    __device__ virtual bool bounding_box(aabb &output_box) const override {
+        output_box =
+            aabb(point3(-radius, -radius, zmin), point3(radius, radius, zmax));
+        return true;
+    }
+
 public:
     material *mat_ptr{};
     float radius{};
     float zmin{}, zmax{};
     transform o2w{identity()};
+};
+
+__device__ bool box_compare(hittable *a, hittable *b, int axis) {
+    aabb box_a, box_b;
+    if (!a->bounding_box(box_a) || !b->bounding_box(box_b))
+        assert(false && "no bounding box in bvh_node constructor");
+    return box_a.min().e[axis] < box_b.min().e[axis];
+}
+
+__device__ void pop_sort(hittable **objects, int start, int end, int axis) {
+    for (int i = start; i < end - 1; ++i) {
+        for (int j = i + 1; j < end; ++j) {
+            if (box_compare(objects[i], objects[j], axis)) {
+                auto temp = objects[i];
+                objects[i] = objects[j];
+                objects[j] = temp;
+            }
+        }
+    }
+}
+
+class bvh_node : public hittable {
+public:
+    __device__ bvh_node() : hittable(class_type::bvh_node) {}
+    __device__ bvh_node(const hittable_list &list)
+        : bvh_node(list.objects, 0, list.len) {}
+    __device__ bvh_node(hittable **src_objects, int start, int end)
+        : hittable(class_type::bvh_node) {
+        int axis = (start - end) % 3;
+        auto obj_count = end - start;
+        if (obj_count == 1) {
+            left = right = src_objects[start];
+        } else if (obj_count == 2) {
+            left = src_objects[start];
+            right = src_objects[start + 1];
+        } else {
+            pop_sort(src_objects, start, end, axis);
+            auto mid = (start + end) / 2;
+            left = new bvh_node(src_objects, start, mid);
+            right = new bvh_node(src_objects, mid, end);
+        }
+
+        aabb box_left, box_right;
+        if (!left->bounding_box(box_left) || !right->bounding_box(box_right))
+            assert(false && "no bounding box in bvh_node constructor");
+        box = surrounding_box(box_left, box_right);
+    }
+
+    __device__ virtual bool bounding_box(aabb &output_box) const override {
+        output_box = box;
+        return true;
+    }
+
+    __device__ bool hit(const ray &r, float t_min, float t_max,
+                        hit_record &rec) const override {
+        if (!box.hit(r, t_min, t_max))
+            return false;
+        bool hit_left = left->hit(r, t_min, t_max, rec);
+        bool hit_right = right->hit(r, t_min, hit_left ? rec.t : t_max, rec);
+        return hit_left || hit_right;
+    }
+
+public:
+    hittable *left;
+    hittable *right;
+    aabb box;
 };

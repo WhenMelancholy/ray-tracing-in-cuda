@@ -76,6 +76,7 @@ enum class class_type {
     xz_rect,
     yz_rect,
     cylinder,
+    bvh_node,
 
     // material
     material,

@@ -406,7 +406,7 @@ __device__ hittable *move_to_device(hittable *src) {
             dst->objects[i] =
                 move_to_device(((hittable_list *)src)->objects[i]);
         }
-        return dst;
+        return new bvh_node(dst->objects, 0, dst->len);
     }
     if (src->type == class_type::sphere) {
         return new sphere(((sphere *)src)->center, ((sphere *)src)->radius,
