@@ -328,16 +328,16 @@ hittable **parser_object(json &data) {
                 auto angle = objdata["rotate"]["angle"].get<double>();
                 ((cylinder *)host_objects[i])
                     ->rotate(axis, angle / 180.0 * M_PI);
-                printf("rotate: %f %f %f %f\n", axis.x(), axis.y(), axis.z(),
-                       angle);
+                // printf("rotate: %f %f %f %f\n", axis.x(), axis.y(), axis.z(),
+                //        angle);
             }
             if (objdata.contains("translate")) {
                 auto offset = vec3(objdata["translate"][0].get<double>(),
                                    objdata["translate"][1].get<double>(),
                                    objdata["translate"][2].get<double>());
                 ((cylinder *)host_objects[i])->translate(offset);
-                printf("translate: %f %f %f\n", offset.x(), offset.y(),
-                       offset.z());
+                // printf("translate: %f %f %f\n", offset.x(), offset.y(),
+                //        offset.z());
             }
 
             data["object"]["data"][i]["host_ptr"] =

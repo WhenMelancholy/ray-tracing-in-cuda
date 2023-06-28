@@ -6,9 +6,9 @@
         0.99
     ],
     "max_depth": 50,
-    "samples_per_pixel": 100,
-    "width": 800,
-    "height": 450,
+    "samples_per_pixel": 50,
+    "width": 400,
+    "height": 300,
     "camera": {
         "lookfrom": [
             0,
@@ -25,7 +25,7 @@
             1,
             0
         ],
-        "vfov": 20,
+        "vfov": 23,
         "aperture": 0.1
     },
     "object": {
