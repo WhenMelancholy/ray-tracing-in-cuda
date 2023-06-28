@@ -19,6 +19,7 @@ set(COMMON_HEADERS
         vec3.cuh
         texture.cuh
         parser.hpp
+        aabb.hpp 
         )
 
 add_executable(parallel_compute main.cu ${COMMON_HEADERS})
