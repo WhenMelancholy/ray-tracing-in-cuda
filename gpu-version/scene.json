@@ -6,7 +6,7 @@
         0.8171875
     ],
     "max_depth": 50,
-    "samples_per_pixel": 5000,
+    "samples_per_pixel": 1000,
     "width": 1920,
     "height": 1080,
     "camera": {
