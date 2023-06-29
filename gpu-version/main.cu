@@ -296,7 +296,9 @@ int oldmain(int argc, char *argv[]) {
     when("Finish the initialization of random library and constants\n");
 
     // UPDATE 将世界和相机的创建放到函数中
-    auto [dev_world, dev_camera] =
+    hittable **dev_world;
+    camera **dev_camera;
+    std::tie(dev_world, dev_camera) =
         get_coded_scene(image_width, image_height, num_of_objects, states);
 
     // 分配本地和显卡图像的空间

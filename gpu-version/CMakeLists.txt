@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.16)
 project(ray_tracing CUDA CXX C)
 
-set(CMAKE_CUDA_STANDARD 20)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CUDA_STANDARD 14)
+set(CMAKE_CXX_STANDARD 14)
 add_compile_definitions(BASIC_CUDA_VERSION)
 
 find_package(nlohmann_json CONFIG REQUIRED)
