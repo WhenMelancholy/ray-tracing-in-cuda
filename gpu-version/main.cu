@@ -398,6 +398,21 @@ __device__ material *move_to_device(material *src) {
 }
 
 __device__ hittable *move_to_device(hittable *src) {
+    if (src->type == class_type::xy_rect) {
+        auto tmp = (xy_rect *)src;
+        return new xy_rect(tmp->x0, tmp->x1, tmp->y0, tmp->y1, tmp->k,
+                           move_to_device(tmp->mp));
+    }
+    if (src->type == class_type::yz_rect) {
+        auto tmp = (yz_rect *)src;
+        return new yz_rect(tmp->y0, tmp->y1, tmp->z0, tmp->z1, tmp->k,
+                           move_to_device(tmp->mp));
+    }
+    if (src->type == class_type::xz_rect) {
+        auto tmp = (xz_rect *)src;
+        return new xz_rect(tmp->x0, tmp->x1, tmp->z0, tmp->z1, tmp->k,
+                           move_to_device(tmp->mp));
+    }
     if (src->type == class_type::hittable_list) {
         hittable_list *dst = new hittable_list();
         dst->len = ((hittable_list *)src)->len;

@@ -23,49 +23,79 @@ for angle in range(0, 360, 60 // framerate):
     scene["texture"]["data"] = []
     scene["object"]["data"] = []
 
-    num_object = 20
+    num_object = 5
     space = 5
 
-    for id in range(-num_object, num_object):
+    for i, id in enumerate(range(-num_object*3, num_object*3)):
         scene["texture"]["data"].append({
             "type": "solid_color",
-            "color": [0.5, 0, 0]
+            "color": [232/256, 209/256, 209/256]
+        })
+        scene["texture"]["data"].append({
+            "type": "solid_color",
+            "color": [232/256, 209/256, 209/256]
+        })
+        scene["texture"]["data"].append({
+            "type": "solid_color",
+            "color": [202/256, 202/256, 224/256]
         })
         scene["material"]["data"].append({
-            "type": "lambertian",
-            "texture": id+num_object
+            "type": "diffuse_light",
+            "texture": i*3+0,
+        })
+        scene["material"]["data"].append({
+            "type": "diffuse_light",
+            "texture": i*3+1,
+        })
+        scene["material"]["data"].append({
+            "type": "diffuse_light",
+            "texture": i*3+2,
         })
 
-    for offset in range(5):
-        for id in range(-num_object, num_object):
+    for offset in range(3):
+        for i, id in enumerate(range(-num_object, num_object)):
             theta = 36*(id+num_object)+angle
             theta = theta / 180 * math.pi
-            xoffset = offset*space-2*space
-            zoffset = math.fabs(offset-2)*-20+40
+            xoffset = offset*space-space
+            zoffset = math.fabs(offset-1)*-20+20
             scene["object"]["data"].append({
                 "type": "sphere",
                 "center": [2.5*math.cos(theta)+xoffset, id, 2.5*math.sin(theta)+zoffset],
                 "radius": 0.5,
-                "material": id+num_object
+                "material": i*3+0
             })
             scene["object"]["data"].append({
                 "type": "sphere",
                 "center": [2.5*math.cos(theta+math.pi)+xoffset, id, 2.5*math.sin(theta+math.pi)+zoffset],
                 "radius": 0.5,
-                "material": id+num_object
+                "material": i*3+1
             })
             scene["object"]["data"].append({
                 "type": "cylinder",
                 "radius": 0.3,
-                "zmin": -2.5,
-                "zmax": 2.5,
-                "material": id+num_object,
+                "zmin": -2.18,
+                "zmax": 2.18,
+                "material": i*3+2,
                 "translate": [0+xoffset, id, 0+zoffset],
                 "rotate": {
                     "axis": [0, 1, 0],
                     "angle": 36*-(id+num_object)+90+angle
                 }
             })
+    # scene["texture"]["data"].append({
+    #     "type": "solid_color",
+    #     "color": [0.8, 0.8, 0]
+    # })
+    # scene["material"]["data"].append({
+    #     "type": "lambertian",
+    #     "texture": len(scene["texture"]["data"])-1
+    # })
+    # scene["object"]["data"].append({
+    #     "type": "sphere",
+    #     "center": [0, 0, 1000],
+    #     "radius": 950,
+    #     "material": len(scene["material"]["data"])-1
+    # })
     # save file to ./build/scene/scene_00{frame}.json
     with open("./build/scene/scene_{:03d}.json".format(frame), "w") as f:
         json.dump(scene, f)

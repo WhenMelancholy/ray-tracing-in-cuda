@@ -114,7 +114,7 @@
             },
             {
                 "type": "dielectric",
-                "index_of_refraction": 1.5,
+                "index_of_refraction": 5,
                 "texture": 2
             },
             {
