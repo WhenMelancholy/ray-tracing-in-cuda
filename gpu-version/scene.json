@@ -1,5 +1,5 @@
 {
-    "output_file": "./build/blue.png",
+    "output_file": "./build/output/blue.png",
     "background": [
         0.5328125,
         0.834375,
@@ -195,9 +195,9 @@
             {
                 "type": "metal",
                 "albedo": [
-                    0.31,
-                    0.31,
-                    0.31
+                    0.3,
+                    0.1,
+                    0.1
                 ],
                 "fuzz": 0.05,
                 "id": 1
@@ -215,9 +215,9 @@
             {
                 "type": "metal",
                 "albedo": [
-                    0,
-                    0,
-                    0
+                    0.2,
+                    0.2,
+                    0.4
                 ],
                 "fuzz": 0.05,
                 "id": 4
@@ -236,6 +236,11 @@
                 "type": "dielectric",
                 "index_of_refraction": 1.5,
                 "id": 6
+            },
+            {
+                "type": "lambertian",
+                "texture": 2,
+                "id": 7
             }
         ]
     },
@@ -255,6 +260,14 @@
                     4,
                     4,
                     4
+                ]
+            },
+            {
+                "type": "solid_color",
+                "color": [
+                    0.1,
+                    0.2,
+                    0.6
                 ]
             }
         ]

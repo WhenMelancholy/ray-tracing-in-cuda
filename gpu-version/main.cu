@@ -516,6 +516,8 @@ int jsonmain(int argc, char *argv[]) {
     when("Finish writing image\n");
 
     cudaDeviceReset();
+    when("Program finish, cost: %f s\n",
+         double(clock() - start) / CLOCKS_PER_SEC);
     return 0;
 }
 
