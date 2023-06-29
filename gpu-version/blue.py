@@ -8,15 +8,15 @@ os.system("mkdir -p ./build/scene/blue")
 os.system("mkdir -p ./build/output/blue")
 
 # load basic scene from scene.json
-with open("scene.json", "r") as f:
+with open("blue.json", "r") as f:
     scene = json.load(f)
 
-framerate = 30
-total_frame = 180
+framerate = 60
+total_frame = 360
 for frame in tqdm.tqdm(range(total_frame)):
     for item in scene["object"]["data"]:
         if item["type"] == "cylinder":
-            item["rotate"]["angle"] = item["rotate"]["angle"]+2
+            item["rotate"]["angle"] = item["rotate"]["angle"]+1
     scene["output_file"] = "./build/output/blue/frame_{:03d}.png".format(frame)
     with open("./build/scene/blue/blue_{:03d}.json".format(frame), "w") as f:
         json.dump(scene, f)

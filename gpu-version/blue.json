@@ -6,9 +6,9 @@
         0.8171875
     ],
     "max_depth": 50,
-    "samples_per_pixel": 1000,
-    "width": 1920,
-    "height": 1080,
+    "samples_per_pixel": 2000,
+    "width": 2560,
+    "height": 1440,
     "camera": {
         "lookfrom": [
             5,
