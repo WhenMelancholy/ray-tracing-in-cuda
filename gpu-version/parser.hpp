@@ -284,6 +284,105 @@ hittable **parser_object(json &data) {
     hittable **host_objects = new hittable *[data["num_of_objects"].get<int>()];
     for (int i = 0; i < data["num_of_objects"]; ++i) {
         auto objdata = data["object"]["data"][i];
+        if (objdata["type"] == "xy_rect") {
+            /**
+             * public:
+                material *mp;
+                float x0, x1, y0, y1, k;
+            };
+            */
+            auto x0 = objdata["x0"].get<double>();
+            auto x1 = objdata["x1"].get<double>();
+            auto y0 = objdata["y0"].get<double>();
+            auto y1 = objdata["y1"].get<double>();
+            auto k = objdata["k"].get<double>();
+            auto material_id = objdata["material"].get<int>();
+            host_objects[i] = new xy_rect(
+                x0, x1, y0, y1, k,
+                reinterpret_cast<material *>(
+                    data["material"]["data"][material_id]["host_ptr"]
+                        .get<uintptr_t>()));
+            data["object"]["data"][i]["host_ptr"] =
+                reinterpret_cast<uintptr_t>(host_objects[i]);
+
+            hittable *dev_copy, *dev_object;
+            dev_copy = new xy_rect(
+                x0, x1, y0, y1, k,
+                reinterpret_cast<material *>(
+                    data["material"]["data"][material_id]["device_ptr"]
+                        .get<uintptr_t>()));
+            checkCudaErrors(cudaMalloc((void **)&dev_object, sizeof(xy_rect)));
+            checkCudaErrors(cudaMemcpy(dev_object, dev_copy, sizeof(xy_rect),
+                                       cudaMemcpyHostToDevice));
+            data["object"]["data"][i]["device_ptr"] =
+                reinterpret_cast<uintptr_t>(dev_object);
+        }
+        if (objdata["type"] == "xz_rect") {
+            /**
+             * public:
+                material *mp;
+                float x0, x1, z0, z1, k;
+            };
+            */
+            auto x0 = objdata["x0"].get<double>();
+            auto x1 = objdata["x1"].get<double>();
+            auto z0 = objdata["z0"].get<double>();
+            auto z1 = objdata["z1"].get<double>();
+            auto k = objdata["k"].get<double>();
+            auto material_id = objdata["material"].get<int>();
+            host_objects[i] = new xz_rect(
+                x0, x1, z0, z1, k,
+                reinterpret_cast<material *>(
+                    data["material"]["data"][material_id]["host_ptr"]
+                        .get<uintptr_t>()));
+            data["object"]["data"][i]["host_ptr"] =
+                reinterpret_cast<uintptr_t>(host_objects[i]);
+
+            hittable *dev_copy, *dev_object;
+            dev_copy = new xz_rect(
+                x0, x1, z0, z1, k,
+                reinterpret_cast<material *>(
+                    data["material"]["data"][material_id]["device_ptr"]
+                        .get<uintptr_t>()));
+            checkCudaErrors(cudaMalloc((void **)&dev_object, sizeof(xz_rect)));
+            checkCudaErrors(cudaMemcpy(dev_object, dev_copy, sizeof(xz_rect),
+                                       cudaMemcpyHostToDevice));
+            data["object"]["data"][i]["device_ptr"] =
+                reinterpret_cast<uintptr_t>(dev_object);
+        }
+        if (objdata["type"] == "yz_rect") {
+            /**
+             * public:
+                material *mp;
+                float y0, y1, z0, z1, k;
+            };
+            */
+            auto y0 = objdata["y0"].get<double>();
+            auto y1 = objdata["y1"].get<double>();
+            auto z0 = objdata["z0"].get<double>();
+            auto z1 = objdata["z1"].get<double>();
+            auto k = objdata["k"].get<double>();
+            auto material_id = objdata["material"].get<int>();
+            host_objects[i] = new yz_rect(
+                y0, y1, z0, z1, k,
+                reinterpret_cast<material *>(
+                    data["material"]["data"][material_id]["host_ptr"]
+                        .get<uintptr_t>()));
+            data["object"]["data"][i]["host_ptr"] =
+                reinterpret_cast<uintptr_t>(host_objects[i]);
+
+            hittable *dev_copy, *dev_object;
+            dev_copy = new yz_rect(
+                y0, y1, z0, z1, k,
+                reinterpret_cast<material *>(
+                    data["material"]["data"][material_id]["device_ptr"]
+                        .get<uintptr_t>()));
+            checkCudaErrors(cudaMalloc((void **)&dev_object, sizeof(yz_rect)));
+            checkCudaErrors(cudaMemcpy(dev_object, dev_copy, sizeof(yz_rect),
+                                       cudaMemcpyHostToDevice));
+            data["object"]["data"][i]["device_ptr"] =
+                reinterpret_cast<uintptr_t>(dev_object);
+        }
         if (objdata["type"] == "sphere") {
             auto center = point3(objdata["center"][0].get<double>(),
                                  objdata["center"][1].get<double>(),
