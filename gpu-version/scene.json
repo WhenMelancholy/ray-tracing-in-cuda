@@ -1,0 +1,275 @@
+{
+    "output_file": "./build/output/blue.png",
+    "background": [
+        0.5328125,
+        0.834375,
+        0.8171875
+    ],
+    "max_depth": 50,
+    "samples_per_pixel": 1000,
+    "width": 1920,
+    "height": 1080,
+    "camera": {
+        "lookfrom": [
+            5,
+            5,
+            30
+        ],
+        "lookat": [
+            0,
+            0,
+            -20
+        ],
+        "vup": [
+            0,
+            1,
+            0
+        ],
+        "vfov": 23,
+        "aperture": 0.1
+    },
+    "object": {
+        "data": [
+            {
+                "type": "xz_rect",
+                "x0": -100,
+                "x1": 100,
+                "z0": -100,
+                "z1": 100,
+                "k": 0,
+                "material": 0
+            },
+            {
+                "type": "xy_rect",
+                "x0": -100,
+                "x1": 100,
+                "y0": -100,
+                "y1": 100,
+                "k": -20,
+                "material": 0
+            },
+            {
+                "type": "cylinder",
+                "radius": 3.001,
+                "zmin": -0.35,
+                "zmax": 0.35,
+                "rotate": {
+                    "axis": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "angle": 130
+                },
+                "translate": [
+                    0,
+                    3,
+                    0
+                ],
+                "material": 2
+            },
+            {
+                "type": "cylinder",
+                "radius": 1.001,
+                "zmin": -0.15,
+                "zmax": 0.15,
+                "rotate": {
+                    "axis": [
+                        1,
+                        -0.2,
+                        0
+                    ],
+                    "angle": 150
+                },
+                "translate": [
+                    -5,
+                    1,
+                    -2
+                ],
+                "material": 3
+            },
+            {
+                "type": "cylinder",
+                "radius": 0.501,
+                "zmin": -0.1,
+                "zmax": 0.1,
+                "rotate": {
+                    "axis": [
+                        1,
+                        1,
+                        0
+                    ],
+                    "angle": 150
+                },
+                "translate": [
+                    -3,
+                    0.5,
+                    2
+                ],
+                "material": 2
+            },
+            {
+                "type": "cylinder",
+                "radius": 1.5,
+                "zmin": -0.2,
+                "zmax": 0.2,
+                "rotate": {
+                    "axis": [
+                        0.3,
+                        0.51,
+                        1
+                    ],
+                    "angle": 150
+                },
+                "translate": [
+                    5,
+                    1.5,
+                    4
+                ],
+                "material": 2
+            },
+            {
+                "type": "sphere",
+                "center": [
+                    5,
+                    1.5,
+                    4
+                ],
+                "radius": 1.5,
+                "material": 4
+            },
+            {
+                "type": "sphere",
+                "center": [
+                    -3,
+                    0.5,
+                    2
+                ],
+                "radius": 0.5,
+                "material": 4
+            },
+            {
+                "type": "sphere",
+                "center": [
+                    -5,
+                    1,
+                    -2
+                ],
+                "radius": 1,
+                "material": 4
+            },
+            {
+                "type": "sphere",
+                "center": [
+                    10,
+                    6,
+                    -4
+                ],
+                "radius": 6,
+                "material": 6
+            },
+            {
+                "type": "sphere",
+                "center": [
+                    0,
+                    3,
+                    0
+                ],
+                "radius": 3,
+                "material": 6
+            }
+        ]
+    },
+    "material": {
+        "data": [
+            {
+                "type": "metal",
+                "albedo": [
+                    0.117647058823529,
+                    0.27734375,
+                    0.62890625
+                ],
+                "fuzz": 0.5,
+                "id": 0
+            },
+            {
+                "type": "metal",
+                "albedo": [
+                    0.3,
+                    0.1,
+                    0.1
+                ],
+                "fuzz": 0.05,
+                "id": 1
+            },
+            {
+                "type": "diffuse_light",
+                "texture": 0,
+                "id": 2
+            },
+            {
+                "type": "diffuse_light",
+                "texture": 1,
+                "id": 3
+            },
+            {
+                "type": "metal",
+                "albedo": [
+                    0.2,
+                    0.2,
+                    0.4
+                ],
+                "fuzz": 0.05,
+                "id": 4
+            },
+            {
+                "type": "metal",
+                "albedo": [
+                    0.11328125,
+                    0.2734375,
+                    0.6171875
+                ],
+                "fuzz": 0.05,
+                "id": 5
+            },
+            {
+                "type": "dielectric",
+                "index_of_refraction": 1.5,
+                "id": 6
+            },
+            {
+                "type": "lambertian",
+                "texture": 2,
+                "id": 7
+            }
+        ]
+    },
+    "texture": {
+        "data": [
+            {
+                "type": "solid_color",
+                "color": [
+                    0,
+                    4,
+                    4
+                ]
+            },
+            {
+                "type": "solid_color",
+                "color": [
+                    4,
+                    4,
+                    4
+                ]
+            },
+            {
+                "type": "solid_color",
+                "color": [
+                    0.1,
+                    0.2,
+                    0.6
+                ]
+            }
+        ]
+    }
+}

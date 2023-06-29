@@ -231,8 +231,8 @@ struct matrix4x4 {
                 if (ipiv[j] != 1) {
                     for (int k = 0; k < 4; k++) {
                         if (ipiv[k] == 0) {
-                            if (std::abs(minv[j][k]) >= big) {
-                                big = float(std::abs(minv[j][k]));
+                            if (abs(minv[j][k]) >= big) {
+                                big = float(abs(minv[j][k]));
                                 irow = j;
                                 icol = k;
                             }
@@ -244,8 +244,11 @@ struct matrix4x4 {
             ++ipiv[icol];
             // Swap rows _irow_ and _icol_ for pivot
             if (irow != icol) {
-                for (int k = 0; k < 4; ++k)
-                    std::swap(minv[irow][k], minv[icol][k]);
+                for (int k = 0; k < 4; ++k) {
+                    auto tmp = minv[irow][k];
+                    minv[irow][k] = minv[icol][k];
+                    minv[icol][k] = tmp;
+                }
             }
             indxr[i] = irow;
             indxc[i] = icol;
@@ -271,8 +274,11 @@ struct matrix4x4 {
         // Swap columns to reflect permutation
         for (int j = 3; j >= 0; j--) {
             if (indxr[j] != indxc[j]) {
-                for (int k = 0; k < 4; k++)
-                    std::swap(minv[k][indxr[j]], minv[k][indxc[j]]);
+                for (int k = 0; k < 4; k++) {
+                    auto tmp = minv[k][indxr[j]];
+                    minv[k][indxr[j]] = minv[k][indxc[j]];
+                    minv[k][indxc[j]] = tmp;
+                }
             }
         }
         return matrix4x4(minv);

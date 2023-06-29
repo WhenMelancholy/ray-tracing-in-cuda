@@ -296,7 +296,9 @@ int oldmain(int argc, char *argv[]) {
     when("Finish the initialization of random library and constants\n");
 
     // UPDATE 将世界和相机的创建放到函数中
-    auto [dev_world, dev_camera] =
+    hittable **dev_world;
+    camera **dev_camera;
+    std::tie(dev_world, dev_camera) =
         get_coded_scene(image_width, image_height, num_of_objects, states);
 
     // 分配本地和显卡图像的空间
@@ -398,6 +400,21 @@ __device__ material *move_to_device(material *src) {
 }
 
 __device__ hittable *move_to_device(hittable *src) {
+    if (src->type == class_type::xy_rect) {
+        auto tmp = (xy_rect *)src;
+        return new xy_rect(tmp->x0, tmp->x1, tmp->y0, tmp->y1, tmp->k,
+                           move_to_device(tmp->mp));
+    }
+    if (src->type == class_type::yz_rect) {
+        auto tmp = (yz_rect *)src;
+        return new yz_rect(tmp->y0, tmp->y1, tmp->z0, tmp->z1, tmp->k,
+                           move_to_device(tmp->mp));
+    }
+    if (src->type == class_type::xz_rect) {
+        auto tmp = (xz_rect *)src;
+        return new xz_rect(tmp->x0, tmp->x1, tmp->z0, tmp->z1, tmp->k,
+                           move_to_device(tmp->mp));
+    }
     if (src->type == class_type::hittable_list) {
         hittable_list *dst = new hittable_list();
         dst->len = ((hittable_list *)src)->len;
@@ -406,6 +423,7 @@ __device__ hittable *move_to_device(hittable *src) {
             dst->objects[i] =
                 move_to_device(((hittable_list *)src)->objects[i]);
         }
+        // return new bvh_node(dst->objects, 0, dst->len);
         return dst;
     }
     if (src->type == class_type::sphere) {
@@ -428,6 +446,7 @@ __global__ void move_to_device(hittable **src, hittable **dst) {
 }
 
 int jsonmain(int argc, char *argv[]) {
+    cudaDeviceSetLimit(cudaLimitStackSize, 8192 * 4);
     // cpu 计时功能
     auto start = clock();
     when("Start counting time\n");
@@ -497,6 +516,8 @@ int jsonmain(int argc, char *argv[]) {
     when("Finish writing image\n");
 
     cudaDeviceReset();
+    when("Program finish, cost: %f s\n",
+         double(clock() - start) / CLOCKS_PER_SEC);
     return 0;
 }
 
